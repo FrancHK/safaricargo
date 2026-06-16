@@ -1,0 +1,93 @@
+import axios from 'axios';
+import type { Shipment, CreateShipmentForm, ShipmentStatus, Staff, StaffUser, ScanResult, Customer } from '../types';
+
+const api = axios.create({ baseURL: '/api' });
+
+api.interceptors.request.use((config) => {
+  const token =
+    localStorage.getItem('sc_token') ||
+    localStorage.getItem('sc_mapokezi_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+export async function loginAdmin(email: string, password: string) {
+  const { data } = await api.post('/auth/login', { email, password });
+  // backend returns { token, user } — normalize to { token, admin }
+  const user = data.admin || data.user || {};
+  return {
+    token: data.token as string,
+    admin: {
+      username: user.username || user.firstName || user.email || '',
+      email: user.email || '',
+      role: user.role || 'admin'
+    }
+  };
+}
+
+export async function trackShipment(trackingId: string) {
+  const { data } = await api.get(`/shipments/${trackingId}`);
+  return data as Shipment;
+}
+
+export async function getAllShipments(params?: { status?: string; search?: string; page?: number }) {
+  const { data } = await api.get('/shipments', { params });
+  return data as { shipments: Shipment[]; total: number; page: number; pages: number };
+}
+
+export async function createShipment(form: CreateShipmentForm) {
+  const { data } = await api.post('/shipments', form);
+  return data as Shipment;
+}
+
+export async function updateShipmentStatus(id: string, status: ShipmentStatus, note?: string) {
+  const { data } = await api.put(`/shipments/${id}/status`, { status, note });
+  return data as Shipment;
+}
+
+export async function deleteShipment(id: string) {
+  await api.delete(`/shipments/${id}`);
+}
+
+export async function getAllCustomers(params?: { search?: string; is_active?: boolean }) {
+  const { data } = await api.get('/customers', { params });
+  return data as { customers: Customer[]; total: number };
+}
+
+export async function toggleCustomerStatus(id: string, is_active: boolean) {
+  const { data } = await api.patch(`/customers/${id}/status`, { is_active });
+  return data as Customer;
+}
+
+// Staff API
+export async function loginStaff(email: string, password: string) {
+  const { data } = await api.post('/staff/login', { email, password });
+  return data as { token: string; staff: StaffUser };
+}
+
+export async function scanShipment(trackingId: string, staffToken: string) {
+  const { data } = await axios.post('/api/staff/scan', { trackingId }, {
+    baseURL: '',
+    headers: { Authorization: `Bearer ${staffToken}` }
+  });
+  return data as ScanResult;
+}
+
+export async function getAllStaff() {
+  const { data } = await api.get('/staff');
+  return data as { staff: Staff[]; total: number };
+}
+
+export async function createStaff(form: { name: string; email: string; password: string; phone: string; department: string; station: string }) {
+  const { data } = await api.post('/staff', form);
+  return data as Staff;
+}
+
+export async function updateStaff(id: string, updates: Partial<Staff>) {
+  const { data } = await api.patch(`/staff/${id}`, updates);
+  return data as Staff;
+}
+
+export async function deleteStaff(id: string) {
+  await api.delete(`/staff/${id}`);
+}
