@@ -189,51 +189,68 @@ export default function AdminBranches() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {branches.map(b => (
-              <div key={b.id} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all p-5 group">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-11 h-11 bg-gradient-to-br from-brand-blue to-blue-700 rounded-xl flex items-center justify-center shadow-md">
-                    <Building2 className="w-5 h-5 text-white" />
+              <div key={b.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden group flex flex-col">
+                {/* Identity */}
+                <div className="p-5 pb-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 bg-gradient-to-br from-brand-blue to-blue-700 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                        <Building2 className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-base font-bold text-gray-900 truncate">{b.name}</h3>
+                        {(b.location || b.region) ? (
+                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{[b.location, b.region].filter(Boolean).join(' · ')}</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-300 mt-0.5">Hakuna eneo</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
+                      b.is_active
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-600 border border-red-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${b.is_active ? 'bg-green-500' : 'bg-red-400'}`} />
+                      {b.is_active ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    b.is_active
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-600 border border-red-200'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${b.is_active ? 'bg-green-500' : 'bg-red-400'}`} />
-                    {b.is_active ? 'Active' : 'Inactive'}
-                  </span>
                 </div>
 
-                <h3 className="text-lg font-bold text-gray-900 mb-1">{b.name}</h3>
-                {(b.location || b.region) && (
-                  <p className="text-xs text-gray-500 mb-3 flex items-start gap-1">
-                    <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                    <span>
-                      {b.location}
-                      {b.location && b.region && <span className="text-gray-300"> · </span>}
-                      {b.region && <span className="font-medium">{b.region}</span>}
-                    </span>
-                  </p>
-                )}
-
                 {/* Staff count */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-3 mb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-brand-blue" />
-                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Wafanyakazi</span>
+                <div className="px-5">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-3xl font-bold text-brand-blue leading-none">{b.staff_total}</p>
+                        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1.5">Wafanyakazi</p>
+                      </div>
+                      <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <Users className="w-6 h-6 text-brand-blue" />
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-brand-blue leading-none">{b.staff_total}</p>
+                    {b.staff_total > 0 ? (
+                      <div className="flex items-center gap-2 mt-3">
+                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-[10px] font-semibold px-2 py-1 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {b.staff_active} active
+                        </span>
+                        {b.staff_total - b.staff_active > 0 && (
+                          <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-[10px] font-semibold px-2 py-1 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {b.staff_total - b.staff_active} suspended
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-gray-400 mt-3">Hakuna mfanyakazi kwenye station hii</p>
+                    )}
                   </div>
-                  {b.staff_total > 0 && (
-                    <p className="text-[10px] text-gray-500 mt-1.5">
-                      {b.staff_active} active · {b.staff_total - b.staff_active} suspended
-                    </p>
-                  )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="p-5 pt-4 mt-auto flex gap-2">
                   <button
                     onClick={() => openEdit(b)}
                     className="flex-1 text-xs font-semibold text-gray-600 border border-gray-200 px-3 py-2 rounded-lg hover:bg-brand-blue hover:text-white hover:border-brand-blue transition-colors flex items-center justify-center gap-1"
