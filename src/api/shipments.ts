@@ -91,3 +91,55 @@ export async function updateStaff(id: string, updates: Partial<Staff>) {
 export async function deleteStaff(id: string) {
   await api.delete(`/staff/${id}`);
 }
+
+// Settings API
+export interface CompanySettings {
+  id: number;
+  company_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  updated_at: string;
+}
+
+export async function getSettings() {
+  const { data } = await api.get('/settings');
+  return data as CompanySettings;
+}
+
+export async function updateSettings(updates: Partial<Omit<CompanySettings, 'id' | 'updated_at'>>) {
+  const { data } = await api.patch('/settings', updates);
+  return data as CompanySettings;
+}
+
+// Branches API
+export interface Branch {
+  id: string;
+  name: string;
+  location: string;
+  region: string;
+  is_active: boolean;
+  staff_total: number;
+  staff_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAllBranches() {
+  const { data } = await api.get('/branches');
+  return data as { branches: Branch[]; total: number };
+}
+
+export async function createBranch(payload: { name: string; location?: string; region?: string }) {
+  const { data } = await api.post('/branches', payload);
+  return data as Branch;
+}
+
+export async function updateBranch(id: string, updates: Partial<Pick<Branch, 'name' | 'location' | 'region' | 'is_active'>>) {
+  const { data } = await api.patch(`/branches/${id}`, updates);
+  return data as Branch;
+}
+
+export async function deleteBranch(id: string) {
+  await api.delete(`/branches/${id}`);
+}

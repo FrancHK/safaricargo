@@ -20,6 +20,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/vehicles', require('./src/routes/vehicles'));
+app.use('/api/settings', require('./src/routes/settings'));
+app.use('/api/branches', require('./src/routes/branches'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'SafiriCargo API', db: 'Supabase (PostgreSQL)' });

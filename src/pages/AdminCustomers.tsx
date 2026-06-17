@@ -49,9 +49,6 @@ export default function AdminCustomers() {
     }
   }
 
-  const activeCount = customers.filter(c => c.is_active).length;
-  const androidCount = customers.filter(c => c.device_type === 'Android').length;
-  const iosCount = customers.filter(c => c.device_type === 'iOS').length;
 
   function timeAgo(date: string) {
     const diff = Date.now() - new Date(date).getTime();
@@ -68,7 +65,7 @@ export default function AdminCustomers() {
       <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => navigate('/admin/dashboard')}
+            <button onClick={() => navigate(localStorage.getItem('sc_mapokezi_token') ? '/mapokezi' : '/admin/dashboard')}
               className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -78,25 +75,6 @@ export default function AdminCustomers() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Total Customers', value: total, icon: <Users className="w-5 h-5" />, color: 'bg-blue-500' },
-              { label: 'Active', value: activeCount, icon: <CheckCircle className="w-5 h-5" />, color: 'bg-green-500' },
-              { label: 'Android', value: androidCount, icon: <Smartphone className="w-5 h-5" />, color: 'bg-emerald-600' },
-              { label: 'iOS', value: iosCount, icon: <Smartphone className="w-5 h-5" />, color: 'bg-gray-500' },
-            ].map(card => (
-              <div key={card.label} className="bg-white/10 rounded-xl p-4 border border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className={`${card.color} p-2 rounded-lg`}>{card.icon}</div>
-                  <div>
-                    <p className="text-2xl font-bold">{card.value}</p>
-                    <p className="text-blue-300 text-xs">{card.label}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

@@ -11,6 +11,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminCustomers from './pages/AdminCustomers';
 import AdminStaff from './pages/AdminStaff';
 import AdminVehicles from './pages/AdminVehicles';
+import AdminSettings from './pages/AdminSettings';
+import AdminBranches from './pages/AdminBranches';
 import StaffPortal from './pages/StaffPortal';
 import MapokeziPortal from './pages/MapokeziPortal';
 import PrintLabel from './pages/PrintLabel';
@@ -36,6 +38,8 @@ export default function App() {
           <Route path="/admin/customers" element={<ProtectedRoute><AdminCustomers /></ProtectedRoute>} />
           <Route path="/admin/staff" element={<ProtectedRoute adminOnly><AdminStaff /></ProtectedRoute>} />
           <Route path="/admin/vehicles" element={<ProtectedRoute><AdminVehicles /></ProtectedRoute>} />
+          <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
+          <Route path="/admin/branches" element={<ProtectedRoute adminOnly><AdminBranches /></ProtectedRoute>} />
           <Route path="/admin/print" element={<ProtectedRoute><PrintLabel /></ProtectedRoute>} />
 
           {/* Staff & Mapokezi portals */}

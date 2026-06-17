@@ -199,6 +199,128 @@
   flex-shrink: 0;
 }
 
+/* ═══ KILICHOMO NDANI — structured cargo block ═══ */
+.cargo-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.cargo-block-title {
+  font-size: 8px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px dashed #CBD5E1;
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+}
+
+.cargo-items {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cargo-item {
+  background: #ffffff;
+  border-left: 3px solid #1E3A8A;
+  padding: 4px 6px;
+  border-radius: 3px;
+}
+
+.cargo-item-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+.cargo-item-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.cargo-item-label {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.cargo-item-meta {
+  font-size: 8px;
+  font-weight: 600;
+  color: #1E3A8A;
+  white-space: nowrap;
+}
+
+.cargo-item-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 16px;
+}
+
+.cargo-row {
+  display: grid;
+  grid-template-columns: 22px 10px 1fr 10px auto;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  color: #334155;
+  font-family: 'Courier New', monospace;
+}
+
+.cargo-qty {
+  font-weight: 700;
+  text-align: right;
+  color: #0F172A;
+}
+
+.cargo-x, .cargo-eq {
+  color: #94A3B8;
+  text-align: center;
+}
+
+.cargo-unit {
+  color: #475569;
+}
+
+.cargo-sub {
+  font-weight: 700;
+  color: #1E3A8A;
+  text-align: right;
+}
+
+.cargo-fallback {
+  font-size: 9px;
+  color: #334155;
+  padding: 2px 4px;
+}
+
+.cargo-notes {
+  font-size: 8px;
+  color: #475569;
+  padding: 4px 6px;
+  border-top: 1px dashed #CBD5E1;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.cargo-notes-key {
+  font-weight: 700;
+  color: #1E3A8A;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 7px;
+}
+
 .label-divider {
   width: 1px;
   background: #E2E8F0;

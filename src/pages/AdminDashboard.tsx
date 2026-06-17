@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, RefreshCw, Loader2, Package, Truck,
   CheckCircle, Clock, X, ChevronDown, Trash2, Filter, Users,
-  Weight, DollarSign, MapPin, FileText, StickyNote, Box, Printer,
-  TrendingUp, LayoutDashboard, Menu, LogOut, ChevronsLeft, ChevronsRight
+  MapPin, FileText, StickyNote, Printer,
+  TrendingUp, LayoutDashboard, Menu, LogOut, ChevronsLeft, ChevronsRight, Settings, Building2
 } from 'lucide-react';
 import { getAllShipments, createShipment, updateShipmentStatus, deleteShipment } from '../api/shipments';
 import StatusBadge from '../components/StatusBadge';
@@ -19,13 +19,31 @@ const INITIAL_FORM: CreateShipmentForm = {
   from: '', to: '', weight: '', description: ''
 };
 
+interface SubItem {
+  id: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+interface CargoItem {
+  id: string;          // local-only uid
+  type: string;        // 'box' | 'kifungashio' | 'robe' | 'other'
+  customLabel?: string; // when type === 'other'
+  subItems: SubItem[];
+}
+
+function makeSubItem(): SubItem {
+  return {
+    id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    quantity: '1',
+    unitPrice: '',
+  };
+}
+
 const INITIAL_ORDER = {
   customer: null as { id?: string; name: string; phone: string; email?: string; manual?: boolean } | null,
-  cargoType: '' as string,
-  cargoTypeCustom: '',
+  cargoItems: [] as CargoItem[],
   cargoContents: '',
-  weight: '',
-  price: '',
   from: '',
   to: '',
   routeNote: '',
@@ -127,7 +145,9 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
     { label: 'Dashboard', icon: LayoutDashboard, path: dashPath, active: true, roles: ['admin', 'mapokezi'] },
     { label: 'Wateja', icon: Users, path: '/admin/customers', active: false, roles: ['admin', 'mapokezi'] },
     { label: 'Wafanyakazi', icon: Users, path: '/admin/staff', active: false, roles: ['admin'] },
+    { label: 'Matawi', icon: Building2, path: '/admin/branches', active: false, roles: ['admin'] },
     { label: 'Magali', icon: Truck, path: '/admin/vehicles', active: false, roles: ['admin', 'mapokezi'] },
+    { label: 'Settings', icon: Settings, path: '/admin/settings', active: false, roles: ['admin'] },
   ];
   const navItems = allNavItems.filter(item => item.roles.includes(role));
 
@@ -149,28 +169,130 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
     return () => clearTimeout(timer);
   }, [fetchShipments]);
 
+  function addCargoItem(typeId: string) {
+    setOrder(p => {
+      const newItem: CargoItem = {
+        id: `${typeId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: typeId,
+        subItems: [makeSubItem()],
+        ...(typeId === 'other' ? { customLabel: '' } : {}),
+      };
+      return { ...p, cargoItems: [...p.cargoItems, newItem] };
+    });
+  }
+
+  function updateCargoItem(id: string, patch: Partial<CargoItem>) {
+    setOrder(p => ({
+      ...p,
+      cargoItems: p.cargoItems.map(it => it.id === id ? { ...it, ...patch } : it),
+    }));
+  }
+
+  function removeCargoItem(id: string) {
+    setOrder(p => ({ ...p, cargoItems: p.cargoItems.filter(it => it.id !== id) }));
+  }
+
+  function addSubItem(itemId: string) {
+    setOrder(p => ({
+      ...p,
+      cargoItems: p.cargoItems.map(it =>
+        it.id === itemId ? { ...it, subItems: [...it.subItems, makeSubItem()] } : it
+      ),
+    }));
+  }
+
+  function updateSubItem(itemId: string, subId: string, patch: Partial<SubItem>) {
+    setOrder(p => ({
+      ...p,
+      cargoItems: p.cargoItems.map(it =>
+        it.id === itemId
+          ? { ...it, subItems: it.subItems.map(s => s.id === subId ? { ...s, ...patch } : s) }
+          : it
+      ),
+    }));
+  }
+
+  function removeSubItem(itemId: string, subId: string) {
+    setOrder(p => ({
+      ...p,
+      cargoItems: p.cargoItems.map(it =>
+        it.id === itemId
+          ? { ...it, subItems: it.subItems.filter(s => s.id !== subId) }
+          : it
+      ),
+    }));
+  }
+
+  function itemSubtotal(item: CargoItem): number {
+    return item.subItems.reduce((sum, s) => {
+      const q = parseFloat(s.quantity) || 0;
+      const u = parseFloat(s.unitPrice) || 0;
+      return sum + q * u;
+    }, 0);
+  }
+
+  function itemCount(item: CargoItem): number {
+    return item.subItems.reduce((n, s) => n + (parseFloat(s.quantity) || 0), 0);
+  }
+
+  const cargoTotal = order.cargoItems.reduce((sum, it) => sum + itemSubtotal(it), 0);
+  const cargoCount = order.cargoItems.reduce((n, it) => n + itemCount(it), 0);
+
   async function handleCreateShipment(e: React.FormEvent) {
     e.preventDefault();
     if (!order.customer) { setFormError('Tafadhali chagua au ingiza mteja.'); return; }
-    if (!order.cargoType) { setFormError('Chagua aina ya mzigo.'); return; }
+    if (order.cargoItems.length === 0) { setFormError('Chagua angalau aina moja ya mzigo.'); return; }
+    for (const it of order.cargoItems) {
+      if (it.type === 'other' && !it.customLabel?.trim()) { setFormError('Andika jina la mzigo wa "Nyingine".'); return; }
+      if (it.subItems.length === 0) { setFormError('Kila aina ya mzigo lazima iwe na angalau row moja.'); return; }
+      for (const s of it.subItems) {
+        const q = parseFloat(s.quantity);
+        if (!q || q < 1) { setFormError('Idadi kwenye kila row lazima iwe angalau 1.'); return; }
+      }
+    }
     if (!order.from || !order.to) { setFormError('Weka mkoa wa kuanzia na kukuelekea.'); return; }
     if (order.from === order.to) { setFormError('Mkoa wa kuanzia na kukuelekea lazima uwe tofauti.'); return; }
 
     setFormLoading(true);
     setFormError('');
     try {
+      const labelFor = (it: CargoItem) => {
+        if (it.type === 'other') return it.customLabel || 'Nyingine';
+        return CARGO_TYPES.find(c => c.id === it.type)?.label ?? it.type;
+      };
+      const itemsSummary = order.cargoItems
+        .map(it => {
+          const subs = it.subItems
+            .map(s => `${s.quantity} × TZS ${parseFloat(s.unitPrice || '0').toLocaleString()}`)
+            .join(', ');
+          return `${labelFor(it)} (${subs})`;
+        })
+        .join('; ');
+      const primaryType = order.cargoItems[0]?.type || '';
+
       const payload = {
         customerName: order.customer.name,
         phone: order.customer.phone,
         email: order.customer.email || '',
         from: order.from,
         to: order.to,
-        weight: order.weight || '0',
-        description: order.cargoContents,
-        cargo_type: order.cargoType,
-        cargo_type_custom: order.cargoTypeCustom,
-        cargo_contents: order.cargoContents,
-        price: order.price ? parseFloat(order.price) : 0,
+        weight: '0',
+        description: order.cargoContents || itemsSummary,
+        cargo_type: primaryType,
+        cargo_type_custom: order.cargoItems.find(it => it.type === 'other')?.customLabel || '',
+        cargo_contents: [itemsSummary, order.cargoContents].filter(Boolean).join(' — '),
+        cargo_items: order.cargoItems.map(it => ({
+          type: it.type,
+          label: labelFor(it),
+          sub_items: it.subItems.map(s => ({
+            quantity: parseFloat(s.quantity) || 0,
+            unit_price: parseFloat(s.unitPrice) || 0,
+            subtotal: (parseFloat(s.quantity) || 0) * (parseFloat(s.unitPrice) || 0),
+          })),
+          quantity: itemCount(it),
+          subtotal: itemSubtotal(it),
+        })),
+        price: cargoTotal,
         route_note: order.routeNote,
         customer_id: order.customer.id || null,
       } as unknown as CreateShipmentForm;
@@ -482,7 +604,6 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Tracking ID</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Customer</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden md:table-cell">Route</th>
-                    <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden lg:table-cell">Weight</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Status</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden sm:table-cell">Date</th>
                     <th className="text-right px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Actions</th>
@@ -505,7 +626,6 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                         <span className="text-gray-400 mx-1">→</span>
                         <span className="text-gray-700">{s.to}</span>
                       </td>
-                      <td className="px-4 py-3.5 hidden lg:table-cell text-gray-600">{s.weight} kg</td>
                       <td className="px-4 py-3.5">
                         <StatusBadge status={s.status} />
                       </td>
@@ -514,12 +634,6 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => { setShowStatusModal(s); setSelectedStatus(s.status); }}
-                            className="flex items-center gap-1 text-xs font-medium text-brand-blue border border-brand-blue px-2.5 py-1.5 rounded-lg hover:bg-brand-blue hover:text-white transition-colors"
-                          >
-                            <ChevronDown className="w-3 h-3" /> Update
-                          </button>
                           <button
                             onClick={() => navigate(`/admin/print?id=${s.trackingId}`)}
                             className="flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-300 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -560,8 +674,8 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
       {/* ═══ NEW ORDER MODAL ═══ */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-6">
-          <div className="bg-white w-full max-w-2xl shadow-2xl flex flex-col max-h-[95vh]">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-5 lg:p-6">
+          <div className="bg-white w-full max-w-7xl shadow-2xl flex flex-col max-h-[94vh]">
 
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
@@ -596,100 +710,203 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                   />
                 </div>
 
-                {/* ── SECTION 2: AINA YA MZIGO ── */}
+                {/* ── SECTION 2: AINA YA MIZIGO ── */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-6 h-6 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">2</div>
-                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Aina ya Mzigo *</h3>
+                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Aina ya Mizigo *</h3>
+                    <span className="text-xs text-gray-400">(bonyeza kuongeza zaidi)</span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 mb-3">
-                    {CARGO_TYPES.map(ct => (
-                      <button key={ct.id} type="button"
-                        onClick={() => setOrder(p => ({ ...p, cargoType: ct.id, cargoTypeCustom: '' }))}
-                        className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
-                          order.cargoType === ct.id
-                            ? 'border-brand-blue bg-blue-50 text-brand-blue shadow-sm'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span className="text-xl">{ct.icon}</span>
-                        <span className="text-center leading-tight">{ct.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {/* GRID: left = type chips, right = selected items list */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-                  {order.cargoType === 'other' && (
-                    <div className="mb-3">
-                      <label className="label">Andika Jina la Aina ya Mzigo *</label>
-                      <input
-                        value={order.cargoTypeCustom}
-                        onChange={e => setOrder(p => ({ ...p, cargoTypeCustom: e.target.value }))}
-                        placeholder="mfano: Vifaa vya ujenzi, Samani..."
-                        className="input-field"
-                        required={order.cargoType === 'other'}
-                      />
+                    {/* LEFT: Type picker */}
+                    <div className="lg:col-span-4">
+                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Chagua Aina</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {CARGO_TYPES.map(ct => {
+                          const count = order.cargoItems.filter(it => it.type === ct.id).length;
+                          return (
+                            <button key={ct.id} type="button"
+                              onClick={() => addCargoItem(ct.id)}
+                              className="relative flex flex-col items-center gap-1.5 py-4 px-2 rounded-xl border-2 border-gray-200 text-xs font-medium text-gray-700 hover:border-brand-blue hover:bg-blue-50 hover:text-brand-blue transition-all group"
+                            >
+                              {count > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-brand-blue text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow">
+                                  {count}
+                                </span>
+                              )}
+                              <span className="text-2xl">{ct.icon}</span>
+                              <span className="text-center leading-tight">{ct.label}</span>
+                              <span className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Plus className="w-3 h-3 text-brand-blue" />
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Description (moved here) */}
+                      <div className="mt-4">
+                        <label className="label flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-gray-400" /> Maelezo ya Ziada
+                        </label>
+                        <textarea
+                          value={order.cargoContents}
+                          onChange={e => setOrder(p => ({ ...p, cargoContents: e.target.value }))}
+                          placeholder="Elezea kilichopo ndani ya mizigo..."
+                          rows={3}
+                          className="input-field resize-none"
+                        />
+                      </div>
                     </div>
-                  )}
 
-                  <div>
-                    <label className="label flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-gray-400" /> Kilichopo Ndani
-                    </label>
-                    <textarea
-                      value={order.cargoContents}
-                      onChange={e => setOrder(p => ({ ...p, cargoContents: e.target.value }))}
-                      placeholder="Elezea kilichopo ndani ya mzigo..."
-                      rows={2}
-                      className="input-field resize-none"
-                    />
+                    {/* RIGHT: Selected items list */}
+                    <div className="lg:col-span-8">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                          Mizigo Iliyochaguliwa {order.cargoItems.length > 0 && <span className="text-brand-blue">({order.cargoItems.length})</span>}
+                        </p>
+                        {order.cargoItems.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setOrder(p => ({ ...p, cargoItems: [] }))}
+                            className="text-[10px] font-semibold text-red-500 hover:text-red-700 uppercase tracking-wider"
+                          >
+                            Futa Zote
+                          </button>
+                        )}
+                      </div>
+
+                      {order.cargoItems.length === 0 ? (
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl py-12 px-4 text-center text-gray-400">
+                          <Package className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-sm font-medium">Hakuna mzigo bado</p>
+                          <p className="text-xs mt-1">Bonyeza aina yoyote upande wa kushoto kuongeza</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                          {order.cargoItems.map((item, idx) => {
+                            const ct = CARGO_TYPES.find(c => c.id === item.type);
+                            const itemTotal = itemSubtotal(item);
+                            return (
+                              <div key={item.id} className="border border-gray-200 rounded-xl p-3 bg-gray-50 hover:bg-white hover:shadow-sm transition-all">
+                                {/* Item header */}
+                                <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-gray-200">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-lg flex-shrink-0">{ct?.icon ?? '📋'}</span>
+                                    {item.type === 'other' ? (
+                                      <input
+                                        value={item.customLabel || ''}
+                                        onChange={e => updateCargoItem(item.id, { customLabel: e.target.value })}
+                                        placeholder="Andika aina ya mzigo..."
+                                        className="text-sm font-semibold text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-1 flex-1 min-w-0"
+                                        required
+                                      />
+                                    ) : (
+                                      <span className="text-sm font-semibold text-gray-800 truncate">{ct?.label ?? item.type}</span>
+                                    )}
+                                    <span className="text-xs text-gray-400 flex-shrink-0">#{idx + 1}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-xs font-bold text-brand-blue">TZS {itemTotal.toLocaleString()}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeCargoItem(item.id)}
+                                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Ondoa mzigo"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Sub-items header (shown once) */}
+                                <div className="grid grid-cols-[1fr_1fr_1fr_28px] gap-2 mb-1">
+                                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Idadi</span>
+                                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Bei / Moja</span>
+                                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Jumla</span>
+                                  <span></span>
+                                </div>
+
+                                {/* Sub-items rows */}
+                                <div className="space-y-1.5">
+                                  {item.subItems.map(sub => {
+                                    const subTotal = (parseFloat(sub.quantity) || 0) * (parseFloat(sub.unitPrice) || 0);
+                                    const canRemove = item.subItems.length > 1;
+                                    return (
+                                      <div key={sub.id} className="grid grid-cols-[1fr_1fr_1fr_28px] gap-2 items-center">
+                                        <input
+                                          type="number" min="1" step="1"
+                                          value={sub.quantity}
+                                          onChange={e => updateSubItem(item.id, sub.id, { quantity: e.target.value })}
+                                          placeholder="1"
+                                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none bg-white"
+                                        />
+                                        <div className="relative">
+                                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-medium">TZS</span>
+                                          <input
+                                            type="number" min="0" step="500"
+                                            value={sub.unitPrice}
+                                            onChange={e => updateSubItem(item.id, sub.id, { unitPrice: e.target.value })}
+                                            placeholder="0"
+                                            className="w-full pl-10 pr-2 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none bg-white"
+                                          />
+                                        </div>
+                                        <div className="px-3 py-2 text-sm font-bold text-brand-blue bg-blue-50 border border-blue-100 rounded-lg">
+                                          TZS {subTotal.toLocaleString()}
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => canRemove && removeSubItem(item.id, sub.id)}
+                                          disabled={!canRemove}
+                                          className={`p-1.5 rounded-lg transition-colors ${
+                                            canRemove
+                                              ? 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                                              : 'text-gray-200 cursor-not-allowed'
+                                          }`}
+                                          title={canRemove ? 'Ondoa row' : 'Lazima iwe na angalau row moja'}
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Add sub-item */}
+                                <button
+                                  type="button"
+                                  onClick={() => addSubItem(item.id)}
+                                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-blue bg-white border-2 border-dashed border-brand-blue/30 rounded-lg hover:bg-brand-blue/5 hover:border-brand-blue transition-all"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Ongeza Row
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Total — always shown when items exist */}
+                      {order.cargoItems.length > 0 && (
+                        <div className="flex items-center justify-between bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white rounded-xl px-4 py-3 shadow-md mt-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-blue-100">Jumla ya Mizigo</p>
+                            <p className="text-xs text-blue-100">{cargoCount} vipande, {order.cargoItems.length} aina</p>
+                          </div>
+                          <p className="text-2xl font-bold">TZS {cargoTotal.toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* ── SECTION 3: UZITO & BEI ── */}
+                {/* ── SECTION 3: SAFARI / ROUTE ── */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-6 h-6 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">3</div>
-                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Uzito & Bei</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="label flex items-center gap-1.5">
-                        <Weight className="w-3.5 h-3.5 text-gray-400" /> Uzito (kg)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number" min="0.1" step="0.1"
-                          value={order.weight}
-                          onChange={e => setOrder(p => ({ ...p, weight: e.target.value }))}
-                          placeholder="0.0"
-                          className="input-field pr-10"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">kg</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="label flex items-center gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5 text-gray-400" /> Bei ya Mzigo
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">TZS</span>
-                        <input
-                          type="number" min="0" step="500"
-                          value={order.price}
-                          onChange={e => setOrder(p => ({ ...p, price: e.target.value }))}
-                          placeholder="0"
-                          className="input-field pl-11"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── SECTION 4: SAFARI / ROUTE ── */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-brand-blue rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">4</div>
                     <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Safari (Route) *</h3>
                   </div>
 

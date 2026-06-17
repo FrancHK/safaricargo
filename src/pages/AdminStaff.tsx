@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, ArrowLeft, Loader2, Search, RefreshCw,
-  Trash2, CheckCircle, XCircle, X, Eye, EyeOff, Scan
+  Trash2, CheckCircle, XCircle, X, Eye, EyeOff, Scan,
+  Pencil, Phone, MapPin
 } from 'lucide-react';
-import { getAllStaff, createStaff, updateStaff, deleteStaff } from '../api/shipments';
+import { getAllStaff, createStaff, updateStaff, deleteStaff, getAllBranches, type Branch } from '../api/shipments';
 import type { Staff } from '../types';
 import { DEPARTMENTS } from '../types';
 
@@ -34,6 +35,11 @@ export default function AdminStaff() {
   const [formError, setFormError] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [editStaff, setEditStaff] = useState<Staff | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', station: '', department: '' });
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -55,6 +61,12 @@ export default function AdminStaff() {
     return () => clearTimeout(t);
   }, [fetchStaff]);
 
+  useEffect(() => {
+    getAllBranches()
+      .then(res => setBranches(res.branches.filter(b => b.is_active)))
+      .catch(() => { /* silent — fall back to free text */ });
+  }, []);
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setFormLoading(true);
@@ -75,6 +87,34 @@ export default function AdminStaff() {
       const updated = await updateStaff(id, { is_active: !current });
       setStaff(prev => prev.map(w => w.id === id ? { ...w, is_active: updated.is_active } : w));
     } catch { alert('Imeshindwa kubadilisha hali.'); }
+  }
+
+  function openEdit(w: Staff) {
+    setEditStaff(w);
+    setEditForm({ name: w.name, phone: w.phone || '', station: w.station || '', department: w.department });
+    setEditError('');
+  }
+
+  async function handleEditSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editStaff) return;
+    if (!editForm.name.trim()) { setEditError('Jina haliwezi kuwa tupu.'); return; }
+    setEditLoading(true);
+    setEditError('');
+    try {
+      const updated = await updateStaff(editStaff.id, {
+        name: editForm.name.trim(),
+        phone: editForm.phone,
+        station: editForm.station,
+        department: editForm.department,
+      });
+      setStaff(prev => prev.map(w => w.id === editStaff.id ? { ...w, ...updated } : w));
+      setEditStaff(null);
+    } catch (err: unknown) {
+      setEditError((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Imeshindwa kuhifadhi.');
+    } finally {
+      setEditLoading(false);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -105,7 +145,7 @@ export default function AdminStaff() {
       <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => navigate('/admin/dashboard')} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+            <button onClick={() => navigate(localStorage.getItem('sc_mapokezi_token') ? '/mapokezi' : '/admin/dashboard')} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
@@ -153,21 +193,6 @@ export default function AdminStaff() {
           </button>
         </div>
 
-        {/* Departments overview */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {DEPARTMENTS.map(d => {
-            const count = staff.filter(w => w.department === d.name).length;
-            return (
-              <div key={d.name} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
-                <div className={`w-2 h-2 rounded-full mx-auto mb-2 ${STATUS_COLOR[d.status]}`} />
-                <p className="text-xs font-semibold text-gray-700 leading-tight">{d.name}</p>
-                <p className="text-2xl font-black text-brand-blue mt-1">{count}</p>
-                <p className="text-xs text-gray-400">wafanyakazi</p>
-              </div>
-            );
-          })}
-        </div>
-
         {/* Table */}
         <div className="card overflow-hidden p-0">
           {loading ? (
@@ -182,7 +207,7 @@ export default function AdminStaff() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    {['Mfanyakazi', 'Kitengo', 'Kituo', 'Nambari', 'Scans', 'Scan ya Mwisho', 'Hali', 'Vitendo'].map(h => (
+                    {['Mfanyakazi', 'Simu', 'Kitengo', 'Kituo', 'Nambari', 'Scans', 'Hali', 'Vitendo'].map(h => (
                       <th key={h} className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -201,6 +226,13 @@ export default function AdminStaff() {
                           </div>
                         </div>
                       </td>
+                      <td className="px-4 py-3.5 text-gray-700 text-sm font-medium whitespace-nowrap">
+                        {w.phone ? (
+                          <a href={`tel:${w.phone}`} className="hover:text-brand-blue inline-flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-gray-400" /> {w.phone}
+                          </a>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
                       <td className="px-4 py-3.5">
                         <div>
                           <p className="font-medium text-gray-800 text-xs">{w.department}</p>
@@ -211,8 +243,10 @@ export default function AdminStaff() {
                       </td>
                       <td className="px-4 py-3.5 text-gray-600 text-xs">{w.station || '—'}</td>
                       <td className="px-4 py-3.5 font-mono text-xs text-brand-blue font-semibold">{w.employee_id}</td>
-                      <td className="px-4 py-3.5 font-bold text-gray-900">{w.total_scans}</td>
-                      <td className="px-4 py-3.5 text-gray-500 text-xs whitespace-nowrap">{timeAgo(w.last_scan)}</td>
+                      <td className="px-4 py-3.5">
+                        <p className="font-bold text-gray-900">{w.total_scans}</p>
+                        <p className="text-[10px] text-gray-400">{timeAgo(w.last_scan)}</p>
+                      </td>
                       <td className="px-4 py-3.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${w.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${w.is_active ? 'bg-green-500' : 'bg-red-400'}`} />
@@ -221,6 +255,11 @@ export default function AdminStaff() {
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2">
+                          <button onClick={() => openEdit(w)}
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-brand-blue hover:text-white hover:border-brand-blue transition-colors"
+                            title="Hariri">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                           <button onClick={() => handleToggle(w.id, w.is_active)}
                             className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${w.is_active ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-green-700 border-green-200 hover:bg-green-50'}`}>
                             {w.is_active ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
@@ -292,13 +331,139 @@ export default function AdminStaff() {
               </div>
               <div>
                 <label className="label">Kituo / Station</label>
-                <input value={form.station} onChange={e => setForm(p => ({ ...p, station: e.target.value }))} placeholder="mfano: Dar es Salaam Hub" className="input-field" />
+                {branches.length > 0 ? (
+                  <select
+                    value={form.station}
+                    onChange={e => setForm(p => ({ ...p, station: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="">— Hakuna —</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>
+                        {b.name}{b.region ? ` · ${b.region}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={form.station}
+                    onChange={e => setForm(p => ({ ...p, station: e.target.value }))}
+                    placeholder="mfano: Dar es Salaam Hub"
+                    className="input-field"
+                  />
+                )}
+                {branches.length === 0 && (
+                  <p className="text-[10px] text-gray-400 mt-1">Ongeza matawi kwenye "Matawi" ili upate dropdown hapa.</p>
+                )}
               </div>
               {formError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{formError}</div>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1 py-3">Acha</button>
                 <button type="submit" disabled={formLoading} className="btn-primary flex-1 py-3 flex items-center justify-center gap-2">
                   {formLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Inaongeza...</> : 'Ongeza'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EDIT MODAL ═══ */}
+      {editStaff && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-brand-blue rounded-xl flex items-center justify-center">
+                  <Pencil className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Hariri Mfanyakazi</h2>
+                  <p className="text-xs text-gray-500">{editStaff.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditStaff(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSave} className="p-6 space-y-4">
+              <div>
+                <label className="label">Jina Kamili *</label>
+                <input
+                  required
+                  value={editForm.name}
+                  onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Jina la mfanyakazi"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="label flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-gray-400" /> Simu
+                </label>
+                <input
+                  value={editForm.phone}
+                  onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="+255 700 000 000"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="label">Kitengo (Department)</label>
+                <select
+                  value={editForm.department}
+                  onChange={e => setEditForm(p => ({ ...p, department: e.target.value }))}
+                  className="input-field"
+                >
+                  {DEPARTMENTS.map(d => (
+                    <option key={d.name} value={d.name}>{d.label} → {d.status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-gray-400" /> Kituo / Station
+                </label>
+                {branches.length > 0 ? (
+                  <select
+                    value={editForm.station}
+                    onChange={e => setEditForm(p => ({ ...p, station: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="">— Hakuna —</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>
+                        {b.name}{b.region ? ` · ${b.region}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={editForm.station}
+                    onChange={e => setEditForm(p => ({ ...p, station: e.target.value }))}
+                    placeholder="mfano: Dar es Salaam Hub"
+                    className="input-field"
+                  />
+                )}
+                {branches.length === 0 && (
+                  <p className="text-[10px] text-gray-400 mt-1">Ongeza matawi kwenye "Matawi" ili upate dropdown hapa.</p>
+                )}
+              </div>
+
+              {editError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+                  {editError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditStaff(null)} className="btn-outline flex-1 py-3">Acha</button>
+                <button type="submit" disabled={editLoading} className="btn-primary flex-1 py-3 flex items-center justify-center gap-2">
+                  {editLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Inahifadhi...</> : 'Hifadhi'}
                 </button>
               </div>
             </form>
