@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, ArrowLeft, Loader2, CheckCircle, Building2, MapPin, Phone, Mail } from 'lucide-react';
 import { getSettings, updateSettings, type CompanySettings } from '../api/shipments';
+import DashboardLayout from '../components/DashboardLayout';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <DashboardLayout title="Settings">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-4 sm:px-6 lg:px-10 py-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
@@ -71,12 +72,6 @@ export default function AdminSettings() {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <button
-            onClick={() => navigate(localStorage.getItem('sc_mapokezi_token') ? '/mapokezi' : '/admin/dashboard')}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
           <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
             <Settings className="w-6 h-6 text-white" />
           </div>
@@ -216,6 +211,6 @@ export default function AdminSettings() {
           </form>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

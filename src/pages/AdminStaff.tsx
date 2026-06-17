@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, ArrowLeft, Loader2, Search, RefreshCw,
   Trash2, CheckCircle, XCircle, X, Eye, EyeOff, Scan,
-  Pencil, Phone, MapPin
+  Pencil, Phone, MapPin, Building2
 } from 'lucide-react';
 import { getAllStaff, createStaff, updateStaff, deleteStaff, getAllBranches, type Branch } from '../api/shipments';
 import type { Staff } from '../types';
 import { DEPARTMENTS } from '../types';
+import DashboardLayout from '../components/DashboardLayout';
 
 const DEPT_STATUS: Record<string, string> = {
   'Mapokezi': 'Received',
@@ -140,34 +141,48 @@ export default function AdminStaff() {
   const totalScans = staff.reduce((sum, w) => sum + w.total_scans, 0);
 
   return (
-    <div className="min-h-screen bg-brand-gray">
+    <DashboardLayout title="Wafanyakazi">
       {/* Header */}
-      <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => navigate(localStorage.getItem('sc_mapokezi_token') ? '/mapokezi' : '/admin/dashboard')} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold">Wafanyakazi</h1>
-              <p className="text-blue-300 text-sm mt-0.5">Simamia wafanyakazi na vitendo vyao</p>
+      <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-4 sm:px-6 lg:px-10 py-7 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+            backgroundSize: '50px 50px'
+          }}
+        />
+        <div className="absolute -top-24 right-0 w-72 h-72 bg-brand-green/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <Users className="w-6 h-6 text-white" />
             </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight">Wafanyakazi</h1>
+              <p className="text-blue-200/80 text-sm">Simamia wafanyakazi na vitendo vyao</p>
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="hidden sm:flex items-center gap-2 bg-brand-green hover:bg-brand-green-dark text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-brand-green/25 transition-all hover:-translate-y-0.5"
+            >
+              <Plus className="w-4 h-4" /> Ongeza Mfanyakazi
+            </button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {[
-              { label: 'Wafanyakazi Wote', value: total, color: 'bg-blue-500', icon: <Users className="w-5 h-5" /> },
-              { label: 'Wanaofanya Kazi', value: activeCount, color: 'bg-green-500', icon: <CheckCircle className="w-5 h-5" /> },
-              { label: 'Vitendo', value: DEPARTMENTS.length, color: 'bg-purple-500', icon: <Users className="w-5 h-5" /> },
-              { label: 'Jumla ya Scans', value: totalScans, color: 'bg-orange-500', icon: <Scan className="w-5 h-5" /> },
+              { label: 'Wafanyakazi Wote', value: total, color: 'from-blue-400 to-blue-600', icon: <Users className="w-5 h-5" /> },
+              { label: 'Wanaofanya Kazi', value: activeCount, color: 'from-emerald-400 to-green-600', icon: <CheckCircle className="w-5 h-5" /> },
+              { label: 'Vitengo', value: DEPARTMENTS.length, color: 'from-violet-400 to-purple-600', icon: <Building2 className="w-5 h-5" /> },
+              { label: 'Jumla ya Scans', value: totalScans, color: 'from-amber-400 to-orange-600', icon: <Scan className="w-5 h-5" /> },
             ].map(c => (
-              <div key={c.label} className="bg-white/10 rounded-xl p-4 border border-white/10">
+              <div key={c.label} className="relative bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 hover:bg-white/[0.14] hover:-translate-y-0.5 transition-all overflow-hidden">
                 <div className="flex items-center gap-3">
-                  <div className={`${c.color} p-2 rounded-lg`}>{c.icon}</div>
-                  <div>
-                    <p className="text-2xl font-bold">{c.value}</p>
-                    <p className="text-blue-300 text-xs">{c.label}</p>
+                  <div className={`bg-gradient-to-br ${c.color} p-2.5 rounded-xl shadow-md flex-shrink-0`}>{c.icon}</div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold leading-none">{c.value}</p>
+                    <p className="text-blue-200/70 text-xs mt-1 truncate">{c.label}</p>
                   </div>
                 </div>
               </div>
@@ -188,7 +203,7 @@ export default function AdminStaff() {
               <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-brand-green hover:bg-brand-green-dark text-white font-semibold px-5 py-2.5 rounded-lg transition-colors">
+          <button onClick={() => setShowModal(true)} className="sm:hidden flex items-center justify-center gap-2 bg-brand-green hover:bg-brand-green-dark text-white font-semibold px-5 py-2.5 rounded-lg transition-colors w-full">
             <Plus className="w-4 h-4" /> Ongeza Mfanyakazi
           </button>
         </div>
@@ -470,6 +485,6 @@ export default function AdminStaff() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }

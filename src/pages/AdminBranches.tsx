@@ -5,6 +5,7 @@ import {
   Users, CheckCircle, XCircle, RefreshCw
 } from 'lucide-react';
 import { getAllBranches, createBranch, updateBranch, deleteBranch, type Branch } from '../api/shipments';
+import DashboardLayout from '../components/DashboardLayout';
 
 const TANZANIA_REGIONS = [
   'Arusha','Dar es Salaam','Dodoma','Geita','Iringa','Kagera',
@@ -97,7 +98,7 @@ export default function AdminBranches() {
   const totalStaff = branches.reduce((sum, b) => sum + b.staff_total, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <DashboardLayout title="Matawi (Branches)">
       {/* Header */}
       <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-4 sm:px-6 lg:px-10 py-6 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
@@ -108,12 +109,6 @@ export default function AdminBranches() {
         />
         <div className="relative max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-5">
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
               <Building2 className="w-6 h-6 text-white" />
             </div>
@@ -357,6 +352,6 @@ export default function AdminBranches() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }

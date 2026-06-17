@@ -7,6 +7,7 @@ import {
 import { getAllCustomers, toggleCustomerStatus } from '../api/shipments';
 import type { Customer } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import DashboardLayout from '../components/DashboardLayout';
 
 export default function AdminCustomers() {
   const { admin } = useAuth();
@@ -60,15 +61,11 @@ export default function AdminCustomers() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-gray">
+    <DashboardLayout title="App Customers">
       {/* Header */}
       <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => navigate(localStorage.getItem('sc_mapokezi_token') ? '/mapokezi' : '/admin/dashboard')}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <div>
               <h1 className="text-2xl font-bold">App Customers</h1>
               <p className="text-blue-300 text-sm mt-0.5">Wateja waliojisajili kwenye app ya simu</p>
@@ -222,6 +219,6 @@ export default function AdminCustomers() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

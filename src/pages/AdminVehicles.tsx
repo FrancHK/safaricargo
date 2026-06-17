@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import type { Vehicle } from '../types';
+import DashboardLayout from '../components/DashboardLayout';
 
 const STATUS_COLORS: Record<string, string> = {
   available:   'bg-green-100 text-green-700 border-green-200',
@@ -105,14 +106,11 @@ export default function AdminVehicles() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-gray">
+    <DashboardLayout title="Magali ya Kampuni">
       {/* Header */}
       <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => navigate(localStorage.getItem('sc_mapokezi_token') ? '/mapokezi' : '/admin/dashboard')} className="p-2 rounded-lg bg-white/10 hover:bg-white/20">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <div>
               <h1 className="text-2xl font-bold">Magali ya Kampuni</h1>
               <p className="text-blue-300 text-sm mt-0.5">Simamia magali na mzigo</p>
@@ -300,6 +298,6 @@ export default function AdminVehicles() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }
