@@ -25,6 +25,7 @@ function mountAll(base) {
   app.use(`${base}/vehicles`, require('./src/routes/vehicles'));
   app.use(`${base}/settings`, require('./src/routes/settings'));
   app.use(`${base}/branches`, require('./src/routes/branches'));
+  app.use(`${base}/payments`, require('./src/routes/payments'));
   app.get(`${base}/health`, (req, res) => {
     res.json({ status: 'ok', service: 'SafiriCargo API', db: 'Supabase (PostgreSQL)' });
   });

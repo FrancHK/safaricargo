@@ -143,3 +143,42 @@ export async function updateBranch(id: string, updates: Partial<Pick<Branch, 'na
 export async function deleteBranch(id: string) {
   await api.delete(`/branches/${id}`);
 }
+
+// Payment methods API
+export interface PaymentMethod {
+  id: string;
+  type: 'mobile' | 'bank';
+  network_name: string;   // jina la mtandao / benki
+  account_name: string;   // jina la malipo
+  account_number: string; // namba ya malipo
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getPaymentMethods() {
+  const { data } = await api.get('/payments');
+  return data as { payments: PaymentMethod[]; total: number };
+}
+
+export async function createPaymentMethod(payload: {
+  type: 'mobile' | 'bank';
+  network_name: string;
+  account_name?: string;
+  account_number: string;
+}) {
+  const { data } = await api.post('/payments', payload);
+  return data as PaymentMethod;
+}
+
+export async function updatePaymentMethod(
+  id: string,
+  updates: Partial<Pick<PaymentMethod, 'type' | 'network_name' | 'account_name' | 'account_number' | 'is_active'>>,
+) {
+  const { data } = await api.patch(`/payments/${id}`, updates);
+  return data as PaymentMethod;
+}
+
+export async function deletePaymentMethod(id: string) {
+  await api.delete(`/payments/${id}`);
+}

@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, ArrowLeft, Loader2, CheckCircle, Building2, MapPin, Phone, Mail } from 'lucide-react';
-import { getSettings, updateSettings, type CompanySettings } from '../api/shipments';
+import {
+  Settings, ArrowLeft, Loader2, CheckCircle, Building2, MapPin, Phone, Mail,
+  CreditCard, Smartphone, Landmark, Plus, Trash2, Pencil, X, Check,
+} from 'lucide-react';
+import {
+  getSettings, updateSettings, type CompanySettings,
+  getPaymentMethods, createPaymentMethod, updatePaymentMethod, deletePaymentMethod,
+  type PaymentMethod,
+} from '../api/shipments';
 import DashboardLayout from '../components/DashboardLayout';
+
+const emptyPayForm = { type: 'mobile' as 'mobile' | 'bank', network_name: '', account_name: '', account_number: '' };
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -18,10 +27,17 @@ export default function AdminSettings() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  // Payment methods
+  const [payments, setPayments] = useState<PaymentMethod[]>([]);
+  const [payForm, setPayForm] = useState(emptyPayForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [paySaving, setPaySaving] = useState(false);
+  const [payError, setPayError] = useState('');
+
   useEffect(() => {
     (async () => {
       try {
-        const data = await getSettings();
+        const [data, pay] = await Promise.all([getSettings(), getPaymentMethods()]);
         setOriginal(data);
         setForm({
           company_name: data.company_name,
@@ -29,6 +45,7 @@ export default function AdminSettings() {
           phone: data.phone,
           email: data.email,
         });
+        setPayments(pay.payments);
       } catch {
         setError('Imeshindwa kupata settings.');
       } finally {
@@ -36,6 +53,74 @@ export default function AdminSettings() {
       }
     })();
   }, []);
+
+  function startEditPayment(p: PaymentMethod) {
+    setEditingId(p.id);
+    setPayForm({
+      type: p.type,
+      network_name: p.network_name,
+      account_name: p.account_name,
+      account_number: p.account_number,
+    });
+    setPayError('');
+  }
+
+  function cancelEditPayment() {
+    setEditingId(null);
+    setPayForm(emptyPayForm);
+    setPayError('');
+  }
+
+  async function handleSavePayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!payForm.network_name.trim()) {
+      setPayError(payForm.type === 'bank' ? 'Jina la benki linahitajika.' : 'Jina la mtandao linahitajika.');
+      return;
+    }
+    if (!payForm.account_number.trim()) {
+      setPayError('Namba ya malipo inahitajika.');
+      return;
+    }
+    setPaySaving(true);
+    setPayError('');
+    try {
+      if (editingId) {
+        const updated = await updatePaymentMethod(editingId, payForm);
+        setPayments(prev => prev.map(p => (p.id === editingId ? updated : p)));
+      } else {
+        const created = await createPaymentMethod(payForm);
+        setPayments(prev => [...prev, created]);
+      }
+      cancelEditPayment();
+    } catch (err: unknown) {
+      setPayError((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Imeshindwa kuhifadhi malipo.');
+    } finally {
+      setPaySaving(false);
+    }
+  }
+
+  async function handleDeletePayment(id: string) {
+    if (!confirm('Una uhakika unataka kufuta njia hii ya malipo?')) return;
+    const prev = payments;
+    setPayments(p => p.filter(x => x.id !== id));
+    try {
+      await deletePaymentMethod(id);
+      if (editingId === id) cancelEditPayment();
+    } catch {
+      setPayments(prev);
+      setPayError('Imeshindwa kufuta njia ya malipo.');
+    }
+  }
+
+  async function handleTogglePayment(p: PaymentMethod) {
+    const updated = { ...p, is_active: !p.is_active };
+    setPayments(prev => prev.map(x => (x.id === p.id ? updated : x)));
+    try {
+      await updatePaymentMethod(p.id, { is_active: updated.is_active });
+    } catch {
+      setPayments(prev => prev.map(x => (x.id === p.id ? p : x)));
+    }
+  }
 
   const dirty = original && (
     form.company_name !== original.company_name ||
@@ -209,6 +294,174 @@ export default function AdminSettings() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* Section: Payment methods */}
+        {!loading && (
+          <div className="bg-white shadow-md border border-gray-100 p-6 sm:p-8 mt-8">
+            <div className="flex items-center gap-2 mb-1 pb-3 border-b border-gray-100">
+              <CreditCard className="w-5 h-5 text-brand-blue" />
+              <h2 className="text-base font-bold text-gray-900">Njia za Malipo</h2>
+            </div>
+            <p className="text-xs text-gray-400 mb-5 mt-2">
+              Ongeza mitandao ya simu au benki ambapo wateja watalipa. Zitaonekana kwa wateja wakati wa kulipa.
+            </p>
+
+            {/* Add / Edit form */}
+            <form onSubmit={handleSavePayment} className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 mb-6 space-y-4">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                {editingId ? 'Hariri njia ya malipo' : 'Ongeza njia mpya'}
+              </p>
+
+              {/* Type toggle: mobile or bank */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPayForm(p => ({ ...p, type: 'mobile' }))}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition ${
+                    payForm.type === 'mobile'
+                      ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" /> Mtandao wa Simu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayForm(p => ({ ...p, type: 'bank' }))}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition ${
+                    payForm.type === 'bank'
+                      ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Landmark className="w-4 h-4" /> Benki
+                </button>
+              </div>
+
+              <div>
+                <label className="label">{payForm.type === 'bank' ? 'Jina la Benki *' : 'Jina la Mtandao *'}</label>
+                <input
+                  value={payForm.network_name}
+                  onChange={e => setPayForm(p => ({ ...p, network_name: e.target.value }))}
+                  placeholder={payForm.type === 'bank' ? 'CRDB, NMB, NBC...' : 'M-Pesa, Tigo Pesa, Airtel Money...'}
+                  className="input-field"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Jina la Malipo</label>
+                  <input
+                    value={payForm.account_name}
+                    onChange={e => setPayForm(p => ({ ...p, account_name: e.target.value }))}
+                    placeholder="Jina lililosajiliwa"
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="label">{payForm.type === 'bank' ? 'Namba ya Akaunti *' : 'Namba ya Malipo *'}</label>
+                  <input
+                    value={payForm.account_number}
+                    onChange={e => setPayForm(p => ({ ...p, account_number: e.target.value }))}
+                    placeholder={payForm.type === 'bank' ? '0150xxxxxxxxx' : '0700 000 000'}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              {payError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{payError}</div>
+              )}
+
+              <div className="flex gap-3">
+                {editingId && (
+                  <button type="button" onClick={cancelEditPayment} className="btn-outline px-4 py-2.5 text-sm flex items-center gap-1.5">
+                    <X className="w-4 h-4" /> Acha
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={paySaving}
+                  className="btn-primary px-5 py-2.5 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {paySaving
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Inahifadhi...</>
+                    : editingId
+                      ? <><Check className="w-4 h-4" /> Hifadhi</>
+                      : <><Plus className="w-4 h-4" /> Ongeza</>
+                  }
+                </button>
+              </div>
+            </form>
+
+            {/* List */}
+            {payments.length === 0 ? (
+              <div className="text-center py-8 text-sm text-gray-400">
+                Hakuna njia ya malipo bado. Ongeza moja hapo juu.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {payments.map(p => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-3 border rounded-xl px-4 py-3 ${
+                      p.is_active ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-70'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                      p.type === 'bank' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-brand-blue'
+                    }`}>
+                      {p.type === 'bank' ? <Landmark className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-900 text-sm">{p.network_name}</span>
+                        <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">
+                          {p.type === 'bank' ? 'Benki' : 'Simu'}
+                        </span>
+                        {!p.is_active && (
+                          <span className="text-[10px] uppercase tracking-wider font-medium text-amber-600 bg-amber-50 rounded px-1.5 py-0.5">
+                            Imezimwa
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">
+                        {p.account_number}{p.account_name ? ` — ${p.account_name}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleTogglePayment(p)}
+                        title={p.is_active ? 'Zima' : 'Washa'}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
+                          p.is_active
+                            ? 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                            : 'border-green-200 text-green-600 hover:bg-green-50'
+                        }`}
+                      >
+                        {p.is_active ? 'Zima' : 'Washa'}
+                      </button>
+                      <button
+                        onClick={() => startEditPayment(p)}
+                        title="Hariri"
+                        className="p-2 text-gray-400 hover:text-brand-blue hover:bg-blue-50 rounded-lg transition"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePayment(p.id)}
+                        title="Futa"
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </DashboardLayout>
