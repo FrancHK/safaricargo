@@ -54,6 +54,16 @@ export default function Home() {
       {/* Hero Section — full viewport */}
       <section className="relative min-h-[calc(100vh-64px)] flex items-center overflow-hidden bg-[#0f1f5c]">
 
+        {/* Cargo trucks background */}
+        <div className="absolute inset-0">
+          <img
+            src="/carcargo.jpg"
+            alt="SafiriCargo fleet of cargo trucks"
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0f1f5c]/92 via-[#0f1f5c]/85 to-[#0a1628]/96" />
+        </div>
+
         {/* Animated background grid */}
         <div className="absolute inset-0 opacity-[0.07]"
           style={{
@@ -75,7 +85,8 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="max-w-3xl mx-auto text-center">
+          {/* Glassmorphism panel */}
+          <div className="max-w-3xl mx-auto text-center bg-white/[0.07] backdrop-blur-2xl border border-white/15 rounded-[2rem] px-6 sm:px-10 lg:px-14 py-12 sm:py-14 shadow-2xl shadow-black/30">
 
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 backdrop-blur-sm rounded-full px-5 py-2 text-sm font-medium text-white mb-8">

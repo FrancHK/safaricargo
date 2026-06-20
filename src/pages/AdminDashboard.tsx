@@ -113,7 +113,6 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
   const [allShipments, setAllShipments] = useState<Shipment[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -196,16 +195,6 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
   }, []);
 
   useEffect(() => { fetchSidebarData(); }, [fetchSidebarData]);
-
-  // Shipments registered on the day picked in the calendar
-  const selectedDayShipments = useMemo(() => {
-    return allShipments.filter(s => {
-      const d = new Date(s.createdAt);
-      return d.getFullYear() === selectedDate.getFullYear()
-        && d.getMonth() === selectedDate.getMonth()
-        && d.getDate() === selectedDate.getDate();
-    });
-  }, [allShipments, selectedDate]);
 
   const fleet = useMemo(() => ({
     total: vehicles.length,
@@ -767,35 +756,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
           </div>
 
           {/* Calendar */}
-          <Calendar events={allShipments.map(s => s.createdAt)} onSelectDate={setSelectedDate} />
-
-          {/* Selected day's shipments */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-900">Matukio ya Siku</h3>
-              <span className="text-xs text-gray-400">
-                {selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-              </span>
-            </div>
-            {selectedDayShipments.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna mzigo siku hii.</p>
-            ) : (
-              <div className="divide-y divide-gray-50 max-h-40 overflow-y-auto">
-                {selectedDayShipments.map(s => (
-                  <a key={s._id} href={`/track?id=${s.trackingId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center shrink-0">
-                      <Package className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-mono text-xs font-semibold text-brand-blue truncate">{s.trackingId}</p>
-                      <p className="text-xs text-gray-500 truncate">{s.customerName} · {s.from} → {s.to}</p>
-                    </div>
-                    <StatusBadge status={s.status} />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
+          <Calendar events={allShipments.map(s => s.createdAt)} />
         </div>
 
         </div>
