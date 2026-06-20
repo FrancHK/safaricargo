@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Plus, Truck, X, Users, Settings, Building2,
+  Plus, Truck, X, Users, UserCog, Settings, Building2,
   LayoutDashboard, Menu, LogOut, ChevronsLeft, ChevronsRight,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,12 +25,20 @@ interface DashboardLayoutProps {
   onNewShipment?: () => void;
 }
 
+type Role = 'admin' | 'mapokezi';
+interface NavItem {
+  label: string;
+  icon: typeof LayoutDashboard;
+  path: string;
+  roles: Role[];
+}
+
 export default function DashboardLayout({ children, title = 'Dashboard', role, onNewShipment }: DashboardLayoutProps) {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const resolvedRole: 'admin' | 'mapokezi' =
+  const resolvedRole: Role =
     role ?? (localStorage.getItem('sc_mapokezi_token') ? 'mapokezi' : 'admin');
   const isAdmin = resolvedRole === 'admin';
 
@@ -71,17 +79,34 @@ export default function DashboardLayout({ children, title = 'Dashboard', role, o
   }
 
   const dashPath = isAdmin ? '/admin/dashboard' : '/mapokezi';
-  const allNavItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, path: dashPath, roles: ['admin', 'mapokezi'] },
-    { label: 'Wateja', icon: Users, path: '/admin/customers', roles: ['admin', 'mapokezi'] },
-    { label: 'Wafanyakazi', icon: Users, path: '/admin/staff', roles: ['admin'] },
-    { label: 'Matawi', icon: Building2, path: '/admin/branches', roles: ['admin'] },
-    { label: 'Magali', icon: Truck, path: '/admin/vehicles', roles: ['admin', 'mapokezi'] },
-    { label: 'Settings', icon: Settings, path: '/admin/settings', roles: ['admin'] },
+  const navGroups: { title: string; items: NavItem[] }[] = [
+    {
+      title: 'Operesheni',
+      items: [
+        { label: 'Dashboard', icon: LayoutDashboard, path: dashPath, roles: ['admin', 'mapokezi'] },
+        { label: 'Magali', icon: Truck, path: '/admin/vehicles', roles: ['admin', 'mapokezi'] },
+        { label: 'Wateja', icon: Users, path: '/admin/customers', roles: ['admin', 'mapokezi'] },
+      ],
+    },
+    {
+      title: 'Usimamizi',
+      items: [
+        { label: 'Wafanyakazi', icon: UserCog, path: '/admin/staff', roles: ['admin'] },
+        { label: 'Matawi', icon: Building2, path: '/admin/branches', roles: ['admin'] },
+        { label: 'Settings', icon: Settings, path: '/admin/settings', roles: ['admin'] },
+      ],
+    },
   ];
-  const navItems = allNavItems
-    .filter(item => item.roles.includes(resolvedRole))
-    .map(item => ({ ...item, active: location.pathname === item.path }));
+
+  // Visible groups for this role, with active flags.
+  const groups = navGroups
+    .map(g => ({
+      title: g.title,
+      items: g.items
+        .filter(i => i.roles.includes(resolvedRole))
+        .map(i => ({ ...i, active: location.pathname === i.path })),
+    }))
+    .filter(g => g.items.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -135,42 +160,55 @@ export default function DashboardLayout({ children, title = 'Dashboard', role, o
           )}
         </div>
 
-        {/* Nav items */}
-        <nav className={`relative flex-1 py-5 space-y-1 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
-          {!sidebarCollapsed && (
-            <p className="px-3 mb-2 text-[10px] font-semibold text-blue-200/50 uppercase tracking-widest">Menu</p>
-          )}
-          {navItems.map(item => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                onClick={() => { navigate(item.path); setSidebarOpen(false); }}
-                title={sidebarCollapsed ? item.label : undefined}
-                className={`w-full flex items-center rounded-xl text-sm font-medium transition-all ${
-                  sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
-                } ${
-                  item.active
-                    ? 'bg-white/15 text-white shadow-lg backdrop-blur-md border border-white/15'
-                    : 'text-blue-100/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={2} />
-                {!sidebarCollapsed && (
-                  <>
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.active && <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />}
-                  </>
-                )}
-              </button>
-            );
-          })}
+        {/* Nav groups */}
+        <nav className={`relative flex-1 py-5 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
+          {groups.map((group, gi) => (
+            <div key={group.title} className={gi > 0 ? 'mt-6' : ''}>
+              {!sidebarCollapsed ? (
+                <p className="px-3 mb-2 text-[10px] font-semibold text-blue-200/50 uppercase tracking-widest">{group.title}</p>
+              ) : gi > 0 ? (
+                <div className="mx-auto mb-2 w-8 border-t border-white/10" />
+              ) : null}
+
+              <div className="space-y-1">
+                {group.items.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => { navigate(item.path); setSidebarOpen(false); }}
+                      title={sidebarCollapsed ? item.label : undefined}
+                      className={`group relative w-full flex items-center rounded-xl text-sm font-medium transition-all ${
+                        sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
+                      } ${
+                        item.active
+                          ? 'bg-white/15 text-white shadow-lg backdrop-blur-md border border-white/15'
+                          : 'text-blue-100/80 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      {/* Active accent bar */}
+                      {item.active && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-brand-green" />
+                      )}
+                      <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={2} />
+                      {!sidebarCollapsed && (
+                        <>
+                          <span className="flex-1 text-left">{item.label}</span>
+                          {item.active && <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
           {/* Primary action */}
           {onNewShipment && (
-            <div className="pt-4 mt-4 border-t border-white/10">
+            <div className="pt-4 mt-6 border-t border-white/10">
               {!sidebarCollapsed && (
-                <p className="px-3 mb-2 text-[10px] font-semibold text-blue-200/50 uppercase tracking-widest">Actions</p>
+                <p className="px-3 mb-2 text-[10px] font-semibold text-blue-200/50 uppercase tracking-widest">Vitendo</p>
               )}
               <button
                 onClick={() => { onNewShipment(); setSidebarOpen(false); }}
@@ -182,7 +220,7 @@ export default function DashboardLayout({ children, title = 'Dashboard', role, o
                 <div className={`bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 ${sidebarCollapsed ? 'w-6 h-6' : 'w-7 h-7'}`}>
                   <Plus className="w-4 h-4" />
                 </div>
-                {!sidebarCollapsed && <span className="flex-1 text-left">New Shipment</span>}
+                {!sidebarCollapsed && <span className="flex-1 text-left">Oda Mpya</span>}
               </button>
             </div>
           )}
@@ -190,8 +228,8 @@ export default function DashboardLayout({ children, title = 'Dashboard', role, o
 
         {/* User panel */}
         <div className={`relative border-t border-white/10 ${sidebarCollapsed ? 'p-2' : 'p-3'}`}>
-          <div className={`flex items-center rounded-xl bg-white/5 ${sidebarCollapsed ? 'flex-col gap-2 p-2' : 'gap-3 p-2.5'}`}>
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-blue-light to-brand-blue flex items-center justify-center text-sm font-bold uppercase shadow-md flex-shrink-0">
+          <div className={`flex items-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors ${sidebarCollapsed ? 'flex-col gap-2 p-2' : 'gap-3 p-2.5'}`}>
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-green to-brand-green-dark flex items-center justify-center text-sm font-bold uppercase shadow-md flex-shrink-0">
               {displayName?.[0] ?? 'U'}
             </div>
             {!sidebarCollapsed && (
@@ -202,7 +240,7 @@ export default function DashboardLayout({ children, title = 'Dashboard', role, o
             )}
             <button
               onClick={handleLogout}
-              className="p-2 hover:bg-white/10 rounded-lg text-blue-100/70 hover:text-white transition-colors flex-shrink-0"
+              className="p-2 hover:bg-red-500/20 rounded-lg text-blue-100/70 hover:text-red-300 transition-colors flex-shrink-0"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />

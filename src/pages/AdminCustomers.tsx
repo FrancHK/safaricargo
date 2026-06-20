@@ -63,15 +63,23 @@ export default function AdminCustomers() {
   return (
     <DashboardLayout title="App Customers">
       {/* Header */}
-      <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
+      <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-4 sm:px-6 lg:px-10 py-6 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+            backgroundSize: '50px 50px'
+          }}
+        />
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
+              <Users className="w-6 h-6 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold">App Customers</h1>
-              <p className="text-blue-300 text-sm mt-0.5">Wateja waliojisajili kwenye app ya simu</p>
+              <h1 className="text-2xl font-bold tracking-tight">App Customers</h1>
+              <p className="text-blue-200/80 text-sm">Wateja waliojisajili kwenye app ya simu</p>
             </div>
           </div>
-
         </div>
       </div>
 

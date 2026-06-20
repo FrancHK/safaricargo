@@ -111,29 +111,36 @@ export default function AdminVehicles() {
   return (
     <DashboardLayout title="Magali ya Kampuni">
       {/* Header */}
-      <div className="bg-brand-blue text-white px-4 sm:px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
+      <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-4 sm:px-6 lg:px-10 py-6 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+            backgroundSize: '50px 50px'
+          }}
+        />
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
+              <Truck className="w-6 h-6 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold">Magali ya Kampuni</h1>
-              <p className="text-blue-300 text-sm mt-0.5">Simamia magali na mzigo</p>
+              <h1 className="text-2xl font-bold tracking-tight">Magali ya Kampuni</h1>
+              <p className="text-blue-200/80 text-sm">Simamia magali na mzigo</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: 'Magali Yote', value: stats.total, color: 'bg-blue-500', icon: <Truck className="w-5 h-5" /> },
-              { label: 'Yanasubiri', value: stats.available, color: 'bg-green-500', icon: <CheckCircle className="w-5 h-5" /> },
-              { label: 'Safarini', value: stats.in_transit, color: 'bg-yellow-500', icon: <Send className="w-5 h-5" /> },
-              { label: 'Inapakiwa', value: stats.loading, color: 'bg-purple-500', icon: <Package className="w-5 h-5" /> },
+              { label: 'Magali Yote', value: stats.total, color: 'bg-blue-400/30 text-blue-100', icon: <Truck className="w-5 h-5" /> },
+              { label: 'Yanasubiri', value: stats.available, color: 'bg-brand-green/30 text-brand-green-light', icon: <CheckCircle className="w-5 h-5" /> },
+              { label: 'Safarini', value: stats.in_transit, color: 'bg-amber-400/30 text-amber-100', icon: <Send className="w-5 h-5" /> },
+              { label: 'Inapakiwa', value: stats.loading, color: 'bg-purple-400/30 text-purple-100', icon: <Package className="w-5 h-5" /> },
             ].map(c => (
-              <div key={c.label} className="bg-white/10 rounded-xl p-4 border border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className={`${c.color} p-2 rounded-lg`}>{c.icon}</div>
-                  <div>
-                    <p className="text-2xl font-bold">{c.value}</p>
-                    <p className="text-blue-300 text-xs">{c.label}</p>
-                  </div>
+              <div key={c.label} className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${c.color}`}>{c.icon}</div>
+                <div>
+                  <p className="text-2xl font-bold leading-none">{c.value}</p>
+                  <p className="text-[10px] text-blue-200/80 uppercase tracking-widest mt-1">{c.label}</p>
                 </div>
               </div>
             ))}
