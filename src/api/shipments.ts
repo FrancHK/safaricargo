@@ -30,9 +30,19 @@ export async function trackShipment(trackingId: string) {
   return data as Shipment;
 }
 
-export async function getAllShipments(params?: { status?: string; search?: string; page?: number }) {
+export async function getAllShipments(params?: { status?: string; search?: string; page?: number; payment_status?: string }) {
   const { data } = await api.get('/shipments', { params });
   return data as { shipments: Shipment[]; total: number; page: number; pages: number };
+}
+
+export async function confirmPayment(id: string) {
+  const { data } = await api.post(`/shipments/${id}/confirm-payment`);
+  return data.shipment as Shipment;
+}
+
+export async function rejectPayment(id: string, reason?: string) {
+  const { data } = await api.post(`/shipments/${id}/reject-payment`, { reason });
+  return data.shipment as Shipment;
 }
 
 export async function createShipment(form: CreateShipmentForm) {

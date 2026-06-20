@@ -21,6 +21,8 @@ export interface StatusHistory {
   timestamp: string;
 }
 
+export type PaymentStatus = 'unpaid' | 'pending' | 'paid';
+
 export interface Shipment {
   _id: string;
   trackingId: string;
@@ -33,6 +35,14 @@ export interface Shipment {
   description?: string;
   status: ShipmentStatus;
   statusHistory: StatusHistory[];
+  price?: number;
+  currency?: string;
+  paymentStatus?: PaymentStatus;
+  paymentRef?: string;
+  paymentMethod?: string;
+  paidAt?: string | null;
+  paymentConfirmedBy?: string;
+  paymentConfirmedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

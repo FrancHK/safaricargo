@@ -4,8 +4,9 @@ import {
   Plus, Search, RefreshCw, Loader2, Package, Truck,
   CheckCircle, Clock, X, Trash2, Filter,
   MapPin, FileText, StickyNote, Printer, TrendingUp,
+  CreditCard, Copy, Check, XCircle, Phone, User, Wallet,
 } from 'lucide-react';
-import { getAllShipments, createShipment, updateShipmentStatus, deleteShipment } from '../api/shipments';
+import { getAllShipments, createShipment, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment } from '../api/shipments';
 import StatusBadge from '../components/StatusBadge';
 import SearchableSelect from '../components/SearchableSelect';
 import CustomerSearchInput from '../components/CustomerSearchInput';
@@ -67,6 +68,26 @@ const CARGO_TYPES = [
 ];
 
 const FILTER_TABS = ['All', ...STATUSES];
+const PENDING_PAYMENTS = 'Pending Payments';
+
+const PAYMENT_BADGE: Record<string, { label: string; cls: string }> = {
+  unpaid:  { label: 'Unpaid',         cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+  pending: { label: 'Pending Review', cls: 'bg-orange-100 text-orange-700 border-orange-200' },
+  paid:    { label: 'Paid',           cls: 'bg-green-100 text-green-700 border-green-200' },
+};
+
+function PaymentBadge({ status }: { status?: string }) {
+  const b = PAYMENT_BADGE[status || 'unpaid'] || PAYMENT_BADGE.unpaid;
+  return (
+    <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${b.cls}`}>
+      {b.label}
+    </span>
+  );
+}
+
+function formatMoney(price?: number, currency = 'TZS') {
+  return `${currency} ${(price ?? 0).toLocaleString()}`;
+}
 
 interface DashboardProps {
   role?: 'admin' | 'mapokezi';
@@ -99,10 +120,21 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
   const [statusNote, setStatusNote] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Payment verification
+  const [pendingCount, setPendingCount] = useState(0);
+  const [reviewShipment, setReviewShipment] = useState<Shipment | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
   const fetchShipments = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getAllShipments({ status: filter === 'All' ? undefined : filter, search });
+      const data = filter === PENDING_PAYMENTS
+        ? await getAllShipments({ payment_status: 'pending', search })
+        : await getAllShipments({ status: filter === 'All' ? undefined : filter, search });
       setShipments(data.shipments);
       setTotal(data.total);
     } catch {
@@ -122,6 +154,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
     try {
       const data = await getAllShipments();
       setAllDates(data.shipments.map(s => s.createdAt));
+      setPendingCount(data.shipments.filter(s => s.paymentStatus === 'pending').length);
     } catch {
       // handled silently
     }
@@ -296,6 +329,72 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
     }
   }
 
+  function openReview(s: Shipment) {
+    setReviewShipment(s);
+    setRejecting(false);
+    setRejectReason('');
+    setReviewError('');
+    setCopied(false);
+  }
+
+  function closeReview() {
+    setReviewShipment(null);
+    setRejecting(false);
+    setRejectReason('');
+    setReviewError('');
+  }
+
+  // Apply an updated shipment to the visible list. In the "Pending Payments"
+  // view, drop it since it is no longer pending.
+  function applyReviewed(updated: Shipment) {
+    setShipments(prev =>
+      filter === PENDING_PAYMENTS
+        ? prev.filter(s => s._id !== updated._id)
+        : prev.map(s => (s._id === updated._id ? updated : s))
+    );
+    fetchAllDates();
+  }
+
+  async function handleConfirmPayment() {
+    if (!reviewShipment) return;
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const updated = await confirmPayment(reviewShipment._id);
+      applyReviewed(updated);
+      closeReview();
+    } catch (err: unknown) {
+      setReviewError((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Imeshindwa kuthibitisha malipo.');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function handleRejectPayment() {
+    if (!reviewShipment) return;
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const updated = await rejectPayment(reviewShipment._id, rejectReason.trim());
+      applyReviewed(updated);
+      closeReview();
+    } catch (err: unknown) {
+      setReviewError((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Imeshindwa kukataa malipo.');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function copyRef(ref: string) {
+    try {
+      await navigator.clipboard.writeText(ref);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable
+    }
+  }
+
   const statusCounts = STATUSES.reduce<Record<string, number>>((acc, s) => {
     acc[s] = shipments.filter(sh => sh.status === s).length;
     return acc;
@@ -390,6 +489,23 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     {tab}
                   </button>
                 ))}
+                <button
+                  onClick={() => setFilter(PENDING_PAYMENTS)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    filter === PENDING_PAYMENTS
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
+                      : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+                  }`}
+                >
+                  <Wallet className="w-3.5 h-3.5" /> Pending Payments
+                  {pendingCount > 0 && (
+                    <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold inline-flex items-center justify-center ${
+                      filter === PENDING_PAYMENTS ? 'bg-white/25 text-white' : 'bg-orange-500 text-white'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -435,6 +551,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Customer</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden md:table-cell">Route</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Status</th>
+                    <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Payment</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden sm:table-cell">Date</th>
                     <th className="text-right px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Actions</th>
                   </tr>
@@ -459,11 +576,29 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                       <td className="px-4 py-3.5">
                         <StatusBadge status={s.status} />
                       </td>
+                      <td className="px-4 py-3.5">
+                        {s.paymentStatus === 'pending' ? (
+                          <button onClick={() => openReview(s)} title="Hakiki malipo">
+                            <PaymentBadge status={s.paymentStatus} />
+                          </button>
+                        ) : (
+                          <PaymentBadge status={s.paymentStatus} />
+                        )}
+                      </td>
                       <td className="px-4 py-3.5 hidden sm:table-cell text-gray-500 text-xs whitespace-nowrap">
                         {new Date(s.createdAt).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {s.paymentStatus === 'pending' && (
+                            <button
+                              onClick={() => openReview(s)}
+                              className="flex items-center gap-1 text-xs font-semibold text-orange-700 border border-orange-300 bg-orange-50 px-2.5 py-1.5 rounded-lg hover:bg-orange-100 transition-colors whitespace-nowrap"
+                              title="Hakiki Malipo"
+                            >
+                              <CreditCard className="w-3 h-3" /> Hakiki
+                            </button>
+                          )}
                           <button
                             onClick={() => navigate(`/admin/print?id=${s.trackingId}`)}
                             className="flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-300 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -883,6 +1018,161 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PAYMENT REVIEW MODAL ═══ */}
+      {reviewShipment && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md shadow-2xl rounded-2xl flex flex-col max-h-[94vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900">Hakiki Malipo</h2>
+                  <p className="text-xs text-brand-blue font-mono mt-0.5">{reviewShipment.trackingId}</p>
+                </div>
+              </div>
+              <button onClick={closeReview} className="p-2 hover:bg-gray-100 rounded-full">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Customer */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="font-semibold">{reviewShipment.customerName}</span>
+                </div>
+                <a href={`tel:${reviewShipment.phone}`} className="flex items-center gap-1.5 text-sm text-brand-blue">
+                  <Phone className="w-3.5 h-3.5" /> {reviewShipment.phone}
+                </a>
+              </div>
+
+              {/* Route */}
+              <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span>{reviewShipment.from}</span>
+                <span className="text-gray-400">→</span>
+                <span>{reviewShipment.to}</span>
+              </div>
+
+              {/* Amount due */}
+              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center justify-between">
+                <span className="text-xs font-semibold text-brand-blue uppercase tracking-wider">Kiasi cha Kulipa</span>
+                <span className="text-2xl font-bold text-brand-blue">{formatMoney(reviewShipment.price, reviewShipment.currency)}</span>
+              </div>
+
+              {/* Payment method */}
+              {reviewShipment.paymentMethod && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Njia ya malipo</span>
+                  <span className="font-medium text-gray-800">{reviewShipment.paymentMethod}</span>
+                </div>
+              )}
+
+              {/* Transaction reference */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Namba ya Muamala</p>
+                <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-3">
+                  <span className="flex-1 font-mono text-lg font-bold text-white tracking-wide break-all">
+                    {reviewShipment.paymentRef || '—'}
+                  </span>
+                  {reviewShipment.paymentRef && (
+                    <button
+                      onClick={() => copyRef(reviewShipment.paymentRef || '')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-200 bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                      title="Nakili namba"
+                    >
+                      {copied ? <><Check className="w-3.5 h-3.5 text-green-400" /> Imenakiliwa</> : <><Copy className="w-3.5 h-3.5" /> Nakili</>}
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Linganisha namba hii na taarifa ya M-Pesa/benki kabla ya kuthibitisha.</p>
+              </div>
+
+              {/* Submitted time */}
+              {reviewShipment.paidAt && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  Iliwasilishwa: {new Date(reviewShipment.paidAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
+
+              {/* Reject reason (revealed) */}
+              {rejecting && (
+                <div>
+                  <label className="label">Sababu ya kukataa (hiari)</label>
+                  <textarea
+                    value={rejectReason}
+                    onChange={e => setRejectReason(e.target.value)}
+                    placeholder="mfano: Namba ya muamala haipatikani kwenye taarifa..."
+                    rows={2}
+                    className="input-field resize-none"
+                  />
+                </div>
+              )}
+
+              {reviewError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{reviewError}</div>
+              )}
+            </div>
+
+            {/* Footer actions — only when pending */}
+            {reviewShipment.paymentStatus === 'pending' ? (
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                {rejecting ? (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setRejecting(false)}
+                      disabled={reviewLoading}
+                      className="btn-outline flex-1 py-3 text-sm"
+                    >
+                      Rudi
+                    </button>
+                    <button
+                      onClick={handleRejectPayment}
+                      disabled={reviewLoading}
+                      className="flex-1 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {reviewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                      Thibitisha Kukataa
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setRejecting(true); setReviewError(''); }}
+                      disabled={reviewLoading}
+                      className="flex-1 py-3 text-sm font-bold text-red-600 border border-red-300 hover:bg-red-50 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <XCircle className="w-4 h-4" /> Kataa
+                    </button>
+                    <button
+                      onClick={handleConfirmPayment}
+                      disabled={reviewLoading}
+                      className="flex-1 py-3 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {reviewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                      Thibitisha Malipo
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex items-center justify-center gap-2 text-sm">
+                <PaymentBadge status={reviewShipment.paymentStatus} />
+                {reviewShipment.paymentConfirmedBy && (
+                  <span className="text-gray-500">na {reviewShipment.paymentConfirmedBy}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

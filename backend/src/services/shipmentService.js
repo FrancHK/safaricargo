@@ -52,9 +52,16 @@ function fromRow(row) {
     cargoContents: row.cargo_contents,
     cargoItems: row.cargo_items || [],
     price: row.price,
+    currency: row.currency || 'TZS',
     routeNote: row.route_note,
     status: row.status,
     statusHistory: row.status_history || [],
+    paymentStatus: row.payment_status || 'unpaid',
+    paymentRef: row.payment_ref || '',
+    paymentMethod: row.payment_method || '',
+    paidAt: row.paid_at || null,
+    paymentConfirmedBy: row.payment_confirmed_by || '',
+    paymentConfirmedAt: row.payment_confirmed_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -90,9 +97,17 @@ async function createShipment(data) {
   return fromRow(created);
 }
 
-async function getAllShipments({ status, search } = {}) {
+async function getAllShipments({ status, search, paymentStatus } = {}) {
   const sb = getSupabase();
-  let query = sb.from('sc_shipments').select('*').order('created_at', { ascending: false }).limit(100);
+  let query = sb.from('sc_shipments').select('*');
+
+  // Pending-payments view sorts by submission time (newest first); default sorts by creation.
+  if (paymentStatus) {
+    query = query.eq('payment_status', paymentStatus).order('paid_at', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+  query = query.limit(100);
 
   if (status && status !== 'All') query = query.eq('status', status);
 
@@ -153,4 +168,62 @@ async function deleteShipment(id) {
   return true;
 }
 
-module.exports = { createShipment, getAllShipments, getShipmentByTrackingId, updateShipmentStatus, deleteShipment, STATUSES };
+// Confirm a customer's payment → marks paid + delivered. Only valid when pending.
+async function confirmPayment(id, adminName) {
+  const sb = getSupabase();
+  const { data: existing, error: fetchErr } = await sb
+    .from('sc_shipments').select('status_history, payment_status').eq('id', id).single();
+
+  if (fetchErr || !existing) return { error: 'not_found' };
+  if (existing.payment_status !== 'pending') return { error: 'not_pending' };
+
+  const now = new Date().toISOString();
+  const history = [
+    ...(existing.status_history || []),
+    { status: 'Delivered', note: `Payment confirmed by ${adminName} — cargo delivered`, timestamp: now },
+  ];
+
+  const { data, error } = await sb.from('sc_shipments').update({
+    payment_status: 'paid',
+    status: 'Delivered',
+    payment_confirmed_by: adminName,
+    payment_confirmed_at: now,
+    status_history: history,
+    updated_at: now,
+  }).eq('id', id).select().single();
+
+  if (error) throw error;
+  return { shipment: fromRow(data) };
+}
+
+// Reject a customer's payment → resets to unpaid so they can resubmit. Status stays "Out for Delivery".
+async function rejectPayment(id, adminName, reason) {
+  const sb = getSupabase();
+  const { data: existing, error: fetchErr } = await sb
+    .from('sc_shipments').select('status_history, payment_status, status').eq('id', id).single();
+
+  if (fetchErr || !existing) return { error: 'not_found' };
+  if (existing.payment_status !== 'pending') return { error: 'not_pending' };
+
+  const now = new Date().toISOString();
+  const history = [
+    ...(existing.status_history || []),
+    {
+      status: existing.status || 'Out for Delivery',
+      note: `Payment rejected by ${adminName}: ${reason || 'hakuna sababu'}`,
+      timestamp: now,
+    },
+  ];
+
+  const { data, error } = await sb.from('sc_shipments').update({
+    payment_status: 'unpaid',
+    payment_ref: '',
+    status_history: history,
+    updated_at: now,
+  }).eq('id', id).select().single();
+
+  if (error) throw error;
+  return { shipment: fromRow(data) };
+}
+
+module.exports = { createShipment, getAllShipments, getShipmentByTrackingId, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, STATUSES };
