@@ -144,44 +144,58 @@ export default function AdminSettings() {
   return (
     <DashboardLayout title="Settings">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-10 py-6">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <div className="w-11 h-11 bg-brand-blue/10 rounded-xl flex items-center justify-center">
-            <Settings className="w-5 h-5 text-brand-blue" />
+      <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-4 sm:px-6 lg:px-10 py-6 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+            backgroundSize: '50px 50px'
+          }}
+        />
+        {/* Clip-path accent shapes */}
+        <div className="absolute right-0 top-0 h-full w-56 bg-brand-green/15 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(45% 0, 100% 0, 100% 100%, 12% 100%)' }} />
+        <div className="absolute right-0 top-0 h-full w-40 bg-white/5 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(55% 0, 100% 0, 100% 100%, 22% 100%)' }} />
+        <div className="relative flex items-center gap-3">
+          <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
+            <Settings className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900">Mipangilio</h1>
-            <p className="text-gray-500 text-sm">Maelezo ya kampuni na njia za malipo</p>
+            <h1 className="text-2xl font-bold tracking-tight">Mipangilio</h1>
+            <p className="text-blue-200/80 text-sm">Maelezo ya kampuni na njia za malipo</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setTab('company')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-              tab === 'company' ? 'bg-brand-blue text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <Building2 className="w-4 h-4" /> Kampuni
-          </button>
-          <button
-            onClick={() => setTab('payments')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-              tab === 'payments' ? 'bg-brand-blue text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" /> Malipo
-            {payments.length > 0 && (
-              <span className={`text-[11px] rounded-full px-1.5 ${tab === 'payments' ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
-                {payments.length}
-              </span>
-            )}
-          </button>
-        </div>
+      <div className="px-4 sm:px-6 lg:px-10 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-6 items-start">
+          {/* Section nav */}
+          <nav className="flex lg:flex-col gap-2 lg:sticky lg:top-4">
+            <button
+              onClick={() => setTab('company')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition w-full text-left ${
+                tab === 'company' ? 'bg-brand-blue text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <Building2 className="w-4 h-4" /> Kampuni
+            </button>
+            <button
+              onClick={() => setTab('payments')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition w-full text-left ${
+                tab === 'payments' ? 'bg-brand-blue text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" /> Malipo
+              {payments.length > 0 && (
+                <span className={`ml-auto text-[11px] rounded-full px-1.5 ${tab === 'payments' ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
+                  {payments.length}
+                </span>
+              )}
+            </button>
+          </nav>
 
+          {/* Active panel */}
+          <div className="max-w-3xl w-full">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-7 h-7 text-brand-blue animate-spin" />
@@ -435,6 +449,8 @@ export default function AdminSettings() {
             )}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -151,8 +151,13 @@ export default function AdminStaff() {
           }}
         />
         <div className="absolute -top-24 right-0 w-72 h-72 bg-brand-green/15 rounded-full blur-3xl pointer-events-none" />
+        {/* Clip-path accent shapes */}
+        <div className="absolute right-0 top-0 h-full w-56 bg-brand-green/15 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(45% 0, 100% 0, 100% 100%, 12% 100%)' }} />
+        <div className="absolute right-0 top-0 h-full w-40 bg-white/5 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(55% 0, 100% 0, 100% 100%, 22% 100%)' }} />
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <Users className="w-6 h-6 text-white" />
@@ -191,7 +196,7 @@ export default function AdminStaff() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-10 py-6">
         {/* Toolbar */}
         <div className="card mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex gap-2 w-full sm:w-auto">
