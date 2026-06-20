@@ -45,6 +45,19 @@ export async function rejectPayment(id: string, reason?: string) {
   return data.shipment as Shipment;
 }
 
+export interface PaymentStatsBucket { count: number; amount: number }
+export interface PaymentStats {
+  pending: PaymentStatsBucket;
+  today: PaymentStatsBucket;
+  month: PaymentStatsBucket;
+  total: PaymentStatsBucket;
+}
+
+export async function getPaymentStats() {
+  const { data } = await api.get('/shipments/payment-stats');
+  return data as PaymentStats;
+}
+
 export async function createShipment(form: CreateShipmentForm) {
   const { data } = await api.post('/shipments', form);
   return data as Shipment;

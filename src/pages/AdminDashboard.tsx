@@ -6,7 +6,7 @@ import {
   MapPin, FileText, StickyNote, Printer, TrendingUp,
   CreditCard, Copy, Check, XCircle, Phone, User, Wallet,
 } from 'lucide-react';
-import { getAllShipments, createShipment, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment } from '../api/shipments';
+import { getAllShipments, createShipment, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, getPaymentStats, type PaymentStats } from '../api/shipments';
 import StatusBadge from '../components/StatusBadge';
 import SearchableSelect from '../components/SearchableSelect';
 import CustomerSearchInput from '../components/CustomerSearchInput';
@@ -122,6 +122,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
   // Payment verification
   const [pendingCount, setPendingCount] = useState(0);
+  const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
   const [reviewShipment, setReviewShipment] = useState<Shipment | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -161,6 +162,18 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
   }, []);
 
   useEffect(() => { fetchAllDates(); }, [fetchAllDates]);
+
+  const fetchPaymentStats = useCallback(async () => {
+    try {
+      const data = await getPaymentStats();
+      setPaymentStats(data);
+      setPendingCount(data.pending.count);
+    } catch {
+      // handled silently
+    }
+  }, []);
+
+  useEffect(() => { fetchPaymentStats(); }, [fetchPaymentStats]);
 
   function addCargoItem(typeId: string) {
     setOrder(p => {
@@ -353,6 +366,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
         : prev.map(s => (s._id === updated._id ? updated : s))
     );
     fetchAllDates();
+    fetchPaymentStats();
   }
 
   async function handleConfirmPayment() {
@@ -455,6 +469,46 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-10 py-8">
+
+        {/* ═══ PAYMENT STATS ═══ */}
+        {paymentStats && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Wallet className="w-4 h-4 text-brand-blue" />
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Takwimu za Malipo</h2>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {([
+                { key: 'pending', label: 'Yanasubiri Kuhakikiwa', bucket: paymentStats.pending, icon: Clock, iconBg: 'bg-orange-100 text-orange-600', clickable: true },
+                { key: 'today',   label: 'Yamethibitishwa Leo',   bucket: paymentStats.today,   icon: CheckCircle, iconBg: 'bg-green-100 text-green-600', clickable: false },
+                { key: 'month',   label: 'Mwezi Huu',             bucket: paymentStats.month,   icon: CreditCard, iconBg: 'bg-blue-100 text-brand-blue', clickable: false },
+                { key: 'total',   label: 'Jumla Yote',            bucket: paymentStats.total,   icon: TrendingUp, iconBg: 'bg-gray-100 text-gray-700', clickable: false },
+              ] as const).map(card => {
+                const Icon = card.icon;
+                return (
+                  <button
+                    key={card.key}
+                    type="button"
+                    onClick={() => card.clickable && setFilter(PENDING_PAYMENTS)}
+                    className={`text-left bg-white border border-gray-100 shadow-sm rounded-xl p-4 transition-all ${
+                      card.clickable ? 'hover:shadow-md hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                        <Icon className="w-5 h-5" strokeWidth={2.25} />
+                      </div>
+                      <span className="text-xs font-medium text-gray-400">{card.bucket.count} malipo</span>
+                    </div>
+                    <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">{formatMoney(card.bucket.amount)}</p>
+                    <p className="text-xs text-gray-500 mt-1">{card.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
 
         {/* ═══ LEFT: SHIPMENTS ═══ */}

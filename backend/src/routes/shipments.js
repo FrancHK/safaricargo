@@ -4,7 +4,7 @@ const eitherAuth = require('../middleware/eitherAuth');
 const { getSupabase } = require('../config/supabase');
 const {
   createShipment, getAllShipments, getShipmentByTrackingId,
-  updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, STATUSES
+  updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, getPaymentStats, STATUSES
 } = require('../services/shipmentService');
 const router = express.Router();
 
@@ -47,6 +47,17 @@ router.get('/', eitherAuth, async (req, res) => {
   } catch (err) {
     console.error('Get all error:', err);
     res.status(500).json({ error: 'Failed to fetch shipments.' });
+  }
+});
+
+// GET /api/shipments/payment-stats — admin or mapokezi (must precede /:trackingId)
+router.get('/payment-stats', eitherAuth, async (_req, res) => {
+  try {
+    const stats = await getPaymentStats();
+    res.json(stats);
+  } catch (err) {
+    console.error('Payment stats error:', err);
+    res.status(500).json({ error: 'Failed to fetch payment stats.' });
   }
 });
 

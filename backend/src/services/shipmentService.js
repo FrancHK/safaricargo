@@ -226,4 +226,42 @@ async function rejectPayment(id, adminName, reason) {
   return { shipment: fromRow(data) };
 }
 
-module.exports = { createShipment, getAllShipments, getShipmentByTrackingId, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, STATUSES };
+// Aggregate payment figures for the dashboard (pending + confirmed today/month/total).
+async function getPaymentStats() {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('sc_shipments')
+    .select('payment_status, price, payment_confirmed_at, paid_at')
+    .in('payment_status', ['pending', 'paid']);
+  if (error) throw error;
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const stats = {
+    pending: { count: 0, amount: 0 },
+    today: { count: 0, amount: 0 },
+    month: { count: 0, amount: 0 },
+    total: { count: 0, amount: 0 },
+  };
+
+  for (const r of data || []) {
+    const price = parseFloat(r.price) || 0;
+    if (r.payment_status === 'pending') {
+      stats.pending.count += 1;
+      stats.pending.amount += price;
+    } else if (r.payment_status === 'paid') {
+      stats.total.count += 1;
+      stats.total.amount += price;
+      const when = r.payment_confirmed_at || r.paid_at;
+      const whenMs = when ? new Date(when).getTime() : 0;
+      if (whenMs >= startMonth) { stats.month.count += 1; stats.month.amount += price; }
+      if (whenMs >= startToday) { stats.today.count += 1; stats.today.amount += price; }
+    }
+  }
+
+  return stats;
+}
+
+module.exports = { createShipment, getAllShipments, getShipmentByTrackingId, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, getPaymentStats, STATUSES };
