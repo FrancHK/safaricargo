@@ -58,10 +58,11 @@ export default function Home() {
         <div className="absolute inset-0">
           <img
             src="/carcargo.jpg"
-            alt="SafiriCargo fleet of cargo trucks"
+            alt="SafiriCargo cargo truck"
             className="w-full h-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0f1f5c]/97 via-[#0f1f5c]/94 to-[#0a1628]/98" />
+          {/* Glass-blue frosted overlay */}
+          <div className="absolute inset-0 backdrop-blur-[3px] bg-gradient-to-b from-brand-blue/45 via-[#0f1f5c]/60 to-[#0a1628]/85" />
         </div>
 
         {/* Animated background grid */}
@@ -223,15 +224,26 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="min-h-screen flex items-center py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <section className="relative min-h-screen flex items-center py-20 overflow-hidden bg-[#0a1628]">
+        {/* Highway truck background */}
+        <div className="absolute inset-0">
+          <img
+            src="/highway-truck.jpg"
+            alt="Cargo truck on the highway"
+            className="w-full h-full object-cover object-center"
+          />
+          {/* Glass-blue frosted overlay */}
+          <div className="absolute inset-0 backdrop-blur-[2px] bg-gradient-to-b from-[#0a1628]/85 via-brand-blue/55 to-[#0a1628]/92" />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           {/* Header */}
           <div className="text-center mb-14">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-semibold tracking-widest uppercase mb-4">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-semibold tracking-widest uppercase mb-4">
               Process
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">How It Works</h2>
-            <p className="text-gray-600 max-w-xl mx-auto">Simple steps to get your cargo delivered safely and on time.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">How It Works</h2>
+            <p className="text-blue-100/80 max-w-xl mx-auto">Simple steps to get your cargo delivered safely and on time.</p>
           </div>
 
           {/* Grid of cards */}
@@ -241,10 +253,10 @@ export default function Home() {
               return (
                 <div
                   key={step.num}
-                  className="group relative bg-white rounded-2xl p-7 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  className="group relative bg-brand-blue/15 backdrop-blur-xl rounded-2xl p-7 border border-white/15 shadow-lg hover:bg-brand-blue/25 hover:border-white/25 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                 >
                   {/* Step number watermark */}
-                  <span className="absolute top-4 right-5 text-5xl font-bold text-gray-100 group-hover:text-gray-200 transition-colors select-none">
+                  <span className="absolute top-4 right-5 text-5xl font-bold text-white/10 group-hover:text-white/20 transition-colors select-none">
                     {step.num}
                   </span>
 
@@ -256,8 +268,8 @@ export default function Home() {
                     <Icon className="w-7 h-7 text-white" strokeWidth={2} />
                   </div>
 
-                  <h3 className="font-semibold text-gray-900 text-lg mb-2">{step.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{step.desc}</p>
+                  <h3 className="font-semibold text-white text-lg mb-2">{step.title}</h3>
+                  <p className="text-sm text-blue-100/80 leading-relaxed">{step.desc}</p>
 
                   {/* Bottom accent bar */}
                   <div
