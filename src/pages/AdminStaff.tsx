@@ -361,7 +361,7 @@ export default function AdminStaff() {
               </div>
               <div>
                 <label className="label">Kitengo (Department) *</label>
-                <select required value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} className="input-field">
+                <select required value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} className="select-field">
                   <option value="">Chagua kitengo...</option>
                   {DEPARTMENTS.map(d => (
                     <option key={d.name} value={d.name}>{d.label} → {d.status}</option>
@@ -374,7 +374,7 @@ export default function AdminStaff() {
                   <select
                     value={form.station}
                     onChange={e => setForm(p => ({ ...p, station: e.target.value }))}
-                    className="input-field"
+                    className="select-field"
                   >
                     <option value="">— Hakuna —</option>
                     {branches.map(b => (
@@ -476,7 +476,7 @@ export default function AdminStaff() {
                 <select
                   value={editForm.department}
                   onChange={e => setEditForm(p => ({ ...p, department: e.target.value }))}
-                  className="input-field"
+                  className="select-field"
                 >
                   {DEPARTMENTS.map(d => (
                     <option key={d.name} value={d.name}>{d.label} → {d.status}</option>
@@ -492,7 +492,7 @@ export default function AdminStaff() {
                   <select
                     value={editForm.station}
                     onChange={e => setEditForm(p => ({ ...p, station: e.target.value }))}
-                    className="input-field"
+                    className="select-field"
                   >
                     <option value="">— Hakuna —</option>
                     {branches.map(b => (

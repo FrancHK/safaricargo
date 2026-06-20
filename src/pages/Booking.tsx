@@ -173,14 +173,14 @@ export default function Booking() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">From (Origin) *</label>
-                  <select name="from" value={form.from} onChange={handleChange} required className="input-field">
+                  <select name="from" value={form.from} onChange={handleChange} required className="select-field">
                     <option value="">Select city...</option>
                     {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="label">To (Destination) *</label>
-                  <select name="to" value={form.to} onChange={handleChange} required className="input-field">
+                  <select name="to" value={form.to} onChange={handleChange} required className="select-field">
                     <option value="">Select city...</option>
                     {CITIES.filter(c => c !== form.from).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>

@@ -357,7 +357,7 @@ export default function AdminVehicles() {
               </div>
               <div>
                 <label className="label">Aina ya Gali</label>
-                <select value={form.vehicle_type} onChange={e => setForm(p => ({ ...p, vehicle_type: e.target.value }))} className="input-field">
+                <select value={form.vehicle_type} onChange={e => setForm(p => ({ ...p, vehicle_type: e.target.value }))} className="select-field">
                   {VEHICLE_TYPES.map(t => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                 </select>
               </div>

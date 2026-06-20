@@ -346,7 +346,7 @@ export default function AdminBranches() {
                 <select
                   value={form.region}
                   onChange={e => setForm(p => ({ ...p, region: e.target.value }))}
-                  className="input-field"
+                  className="select-field"
                 >
                   <option value="">Chagua mkoa...</option>
                   {TANZANIA_REGIONS.map(r => (
