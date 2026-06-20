@@ -474,12 +474,14 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
             {statCards.map(card => {
               const Icon = card.icon;
               return (
-                <div key={card.label} className="bg-white border border-gray-200 rounded-xl p-4">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${card.bg} ${card.accent}`}>
+                <div key={card.label} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${card.bg} ${card.accent}`}>
                     <Icon className="w-5 h-5" strokeWidth={2.25} />
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 leading-none">{card.value}</p>
-                  <p className="text-gray-500 text-xs font-medium mt-1">{card.label}</p>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold text-gray-900 leading-none">{card.value}</p>
+                    <p className="text-gray-500 text-xs font-medium mt-1 truncate">{card.label}</p>
+                  </div>
                 </div>
               );
             })}
@@ -500,18 +502,17 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     key={card.key}
                     type="button"
                     onClick={() => card.clickable && setFilter(PENDING_PAYMENTS)}
-                    className={`text-left bg-white border border-gray-200 rounded-xl p-4 transition-colors ${
+                    className={`text-left bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3 transition-colors ${
                       card.clickable ? 'hover:border-orange-300 cursor-pointer' : 'cursor-default'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.cls}`}>
-                        <Icon className="w-5 h-5" strokeWidth={2.25} />
-                      </div>
-                      <span className="text-xs font-medium text-gray-400">{card.bucket.count}</span>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${card.cls}`}>
+                      <Icon className="w-5 h-5" strokeWidth={2.25} />
                     </div>
-                    <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">{formatMoney(card.bucket.amount)}</p>
-                    <p className="text-gray-500 text-xs font-medium mt-1">{card.label}</p>
+                    <div className="min-w-0">
+                      <p className="text-base sm:text-lg font-bold text-gray-900 leading-none truncate">{formatMoney(card.bucket.amount)}</p>
+                      <p className="text-gray-500 text-xs font-medium mt-1 truncate">{card.label} · {card.bucket.count}</p>
+                    </div>
                   </button>
                 );
               })}
@@ -521,10 +522,10 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-10 py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-6 items-start">
 
         {/* ═══ LEFT: SHIPMENTS ═══ */}
-        <div className="min-w-0 order-2 xl:order-1">
+        <div className="min-w-0 order-2 lg:order-1">
         {/* Section title + toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
@@ -709,7 +710,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
         {/* ═══ END LEFT ═══ */}
 
         {/* ═══ RIGHT: SIDEBAR ═══ */}
-        <div className="order-1 xl:order-2 space-y-5">
+        <div className="order-1 lg:order-2 lg:sticky lg:top-4 space-y-4">
           {/* Calendar */}
           <Calendar events={allShipments.map(s => s.createdAt)} onSelectDate={setSelectedDate} />
 
@@ -724,7 +725,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
             {selectedDayShipments.length === 0 ? (
               <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna mzigo siku hii.</p>
             ) : (
-              <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+              <div className="divide-y divide-gray-50 max-h-40 overflow-y-auto">
                 {selectedDayShipments.map(s => (
                   <a key={s._id} href={`/track?id=${s.trackingId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center shrink-0">
@@ -781,7 +782,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
             {branches.length === 0 ? (
               <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna matawi.</p>
             ) : (
-              <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+              <div className="divide-y divide-gray-50 max-h-36 overflow-y-auto">
                 {branches.map(b => (
                   <div key={b.id} className="flex items-center gap-3 px-4 py-2.5">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${b.is_active ? 'bg-brand-green' : 'bg-gray-300'}`} />

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Truck, Plus, ArrowLeft, Loader2, X, RefreshCw,
-  CheckCircle, Wrench, Package, Weight, Send, RotateCcw, Trash2,
+  CheckCircle, Wrench, Package, Send, RotateCcw, Trash2,
   MapPin, Clock, PackageOpen
 } from 'lucide-react';
 import axios from 'axios';
@@ -118,7 +118,12 @@ export default function AdminVehicles() {
             backgroundSize: '50px 50px'
           }}
         />
-        <div className="relative max-w-7xl mx-auto">
+        {/* Clip-path accent shapes */}
+        <div className="absolute right-0 top-0 h-full w-56 bg-brand-green/15 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(45% 0, 100% 0, 100% 100%, 12% 100%)' }} />
+        <div className="absolute right-0 top-0 h-full w-40 bg-white/5 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(55% 0, 100% 0, 100% 100%, 22% 100%)' }} />
+        <div className="relative">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
               <Truck className="w-6 h-6 text-white" />
@@ -148,9 +153,9 @@ export default function AdminVehicles() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-10 py-6">
         {/* Toolbar */}
-        <div className="card mb-6 flex justify-between items-center">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-5 flex justify-between items-center">
           <p className="text-sm text-gray-500">Magali {vehicles.length} yamesajiliwa</p>
           <div className="flex gap-3">
             <button onClick={fetchVehicles} className="border border-gray-300 p-2 rounded-lg hover:bg-gray-50">
@@ -250,11 +255,10 @@ export default function AdminVehicles() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
             {vehicles.map(v => {
-              const pct = v.capacity_kg > 0 ? Math.round((v.current_load_kg / v.capacity_kg) * 100) : 0;
               return (
-                <div key={v.id} className="card hover:shadow-lg transition-shadow">
+                <div key={v.id} className="bg-white border border-gray-200 rounded-xl p-5 hover:border-brand-blue/40 transition-colors">
                   {/* Top */}
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -263,25 +267,19 @@ export default function AdminVehicles() {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${STATUS_COLORS[v.status]}`}>
                           {STATUS_LABELS[v.status]}
                         </span>
-                        <span className="text-xs text-gray-400">{v.vehicle_type}</span>
+                        <span className="text-xs text-gray-400 capitalize">{v.vehicle_type}</span>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-gray-900">{v.plate_number}</p>
-                      <p className="text-xs text-gray-400">{v.capacity_kg} kg max</p>
                     </div>
                   </div>
 
-                  {/* Load bar */}
-                  <div className="mb-4">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{v.current_load_count} mzigo · {v.current_load_kg} kg</span>
-                      <span className="font-semibold">{pct}%</span>
-                    </div>
-                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-brand-green'}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }} />
-                    </div>
+                  {/* Load */}
+                  <div className="mb-4 flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <Package className="w-4 h-4 text-brand-blue" />
+                    <span className="text-sm font-semibold text-gray-800">{v.current_load_count}</span>
+                    <span className="text-xs text-gray-500">mizigo iliyopakiwa</span>
                   </div>
 
                   {v.driver_name && (
@@ -362,11 +360,6 @@ export default function AdminVehicles() {
                 <select value={form.vehicle_type} onChange={e => setForm(p => ({ ...p, vehicle_type: e.target.value }))} className="input-field">
                   {VEHICLE_TYPES.map(t => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="label flex items-center gap-1.5"><Weight className="w-3.5 h-3.5 text-gray-400" /> Uwezo wa Kubeba (kg)</label>
-                <input type="number" min="100" step="100" value={form.capacity_kg}
-                  onChange={e => setForm(p => ({ ...p, capacity_kg: e.target.value }))} className="input-field" />
               </div>
               <div>
                 <label className="label">Maelezo (optional)</label>

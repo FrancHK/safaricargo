@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, Search, RefreshCw, Loader2, Smartphone, ArrowLeft,
+  Users, Search, RefreshCw, Loader2, ArrowLeft,
   CheckCircle, XCircle, MapPin, Package, Clock, Filter
 } from 'lucide-react';
 import { getAllCustomers, toggleCustomerStatus } from '../api/shipments';
@@ -70,7 +70,12 @@ export default function AdminCustomers() {
             backgroundSize: '50px 50px'
           }}
         />
-        <div className="relative max-w-7xl mx-auto">
+        {/* Clip-path accent shapes */}
+        <div className="absolute right-0 top-0 h-full w-56 bg-brand-green/15 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(45% 0, 100% 0, 100% 100%, 12% 100%)' }} />
+        <div className="absolute right-0 top-0 h-full w-40 bg-white/5 pointer-events-none hidden sm:block"
+          style={{ clipPath: 'polygon(55% 0, 100% 0, 100% 100%, 22% 100%)' }} />
+        <div className="relative">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
               <Users className="w-6 h-6 text-white" />
@@ -84,9 +89,9 @@ export default function AdminCustomers() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-10 py-6">
         {/* Filters */}
-        <div className="card mb-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-5">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-400" />
@@ -119,7 +124,7 @@ export default function AdminCustomers() {
         </div>
 
         {/* Table */}
-        <div className="card overflow-hidden p-0">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden p-0">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
@@ -137,7 +142,6 @@ export default function AdminCustomers() {
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Mteja</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden sm:table-cell">Simu / Email</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden md:table-cell">Mji</th>
-                    <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden lg:table-cell">Device</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden lg:table-cell">Mizigo</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide hidden md:table-cell">Login ya Mwisho</th>
                     <th className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wide">Hali</th>
@@ -168,15 +172,6 @@ export default function AdminCustomers() {
                         <div className="flex items-center gap-1.5 text-gray-600">
                           <MapPin className="w-3.5 h-3.5 text-gray-400" />
                           {c.city || '—'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 hidden lg:table-cell">
-                        <div className="flex items-center gap-1.5">
-                          <Smartphone className="w-3.5 h-3.5 text-gray-400" />
-                          <span className="text-gray-700">{c.device_type}</span>
-                          {c.app_version && (
-                            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">v{c.app_version}</span>
-                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3.5 hidden lg:table-cell">
