@@ -82,9 +82,6 @@ export default function Footer() {
           <p className="text-xs text-gray-500">
             &copy; {new Date().getFullYear()} SafiriCargo. All rights reserved.
           </p>
-          <p className="text-xs text-gray-600">
-            Built with React + Node.js + MongoDB
-          </p>
         </div>
       </div>
     </footer>
