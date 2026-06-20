@@ -409,26 +409,45 @@ export default function AdminStaff() {
 
       {/* ═══ EDIT MODAL ═══ */}
       {editStaff && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand-blue rounded-xl flex items-center justify-center">
-                  <Pencil className="w-5 h-5 text-white" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            {/* Gradient avatar header */}
+            <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white px-6 py-5 overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.07] pointer-events-none"
+                style={{
+                  backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+                  backgroundSize: '38px 38px'
+                }}
+              />
+              <div className="absolute right-0 top-0 h-full w-32 bg-brand-green/20 pointer-events-none hidden sm:block"
+                style={{ clipPath: 'polygon(40% 0, 100% 0, 100% 100%, 0 100%)' }} />
+              <button onClick={() => setEditStaff(null)} className="absolute top-4 right-4 p-1.5 hover:bg-white/15 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-white" />
+              </button>
+              <div className="relative flex items-center gap-3.5">
+                <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center text-2xl font-bold uppercase shadow-lg flex-shrink-0">
+                  {editStaff.name.charAt(0)}
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Hariri Mfanyakazi</h2>
-                  <p className="text-xs text-gray-500">{editStaff.name}</p>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold truncate">{editStaff.name}</h2>
+                  <p className="text-blue-200/80 text-xs font-mono">{editStaff.employee_id}</p>
+                  <span className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    editStaff.is_active
+                      ? 'bg-green-400/20 text-green-200 border border-green-300/30'
+                      : 'bg-red-400/20 text-red-200 border border-red-300/30'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${editStaff.is_active ? 'bg-green-300' : 'bg-red-300'}`} />
+                    {editStaff.is_active ? 'Active' : 'Suspended'}
+                  </span>
                 </div>
               </div>
-              <button onClick={() => setEditStaff(null)} className="p-2 hover:bg-gray-100 rounded-full">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
             </div>
 
             <form onSubmit={handleEditSave} className="p-6 space-y-4">
               <div>
-                <label className="label">Jina Kamili *</label>
+                <label className="label flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-gray-400" /> Jina Kamili *
+                </label>
                 <input
                   required
                   value={editForm.name}
@@ -451,7 +470,9 @@ export default function AdminStaff() {
               </div>
 
               <div>
-                <label className="label">Kitengo (Department)</label>
+                <label className="label flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-gray-400" /> Kitengo (Department)
+                </label>
                 <select
                   value={editForm.department}
                   onChange={e => setEditForm(p => ({ ...p, department: e.target.value }))}
@@ -493,16 +514,23 @@ export default function AdminStaff() {
                 )}
               </div>
 
+              {/* Scanner hint */}
+              {editForm.department === SCANNER_DEPT && (
+                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <Scan className="w-3.5 h-3.5 flex-shrink-0" /> Kitengo hiki kinaruhusiwa kufanya scan za mizigo.
+                </div>
+              )}
+
               {editError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
                   {editError}
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2 -mx-6 -mb-6 mt-4 px-6 py-4 bg-gray-50 border-t border-gray-100">
                 <button type="button" onClick={() => setEditStaff(null)} className="btn-outline flex-1 py-3">Acha</button>
                 <button type="submit" disabled={editLoading} className="btn-primary flex-1 py-3 flex items-center justify-center gap-2">
-                  {editLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Inahifadhi...</> : 'Hifadhi'}
+                  {editLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Inahifadhi...</> : <><CheckCircle className="w-4 h-4" /> Hifadhi</>}
                 </button>
               </div>
             </form>
