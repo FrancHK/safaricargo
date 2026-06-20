@@ -17,6 +17,9 @@ const DEPT_STATUS: Record<string, string> = {
   'Utoaji': 'Out for Delivery'
 };
 
+// Mpakiaji pekee (hatua ya Processing) ndiye anayeruhusiwa kufanya scan.
+const SCANNER_DEPT = 'Mpakiaji';
+
 const STATUS_COLOR: Record<string, string> = {
   'Received': 'bg-gray-400', 'Processing': 'bg-blue-500', 'In Transit': 'bg-yellow-500',
   'Arrived at Hub': 'bg-purple-500', 'Out for Delivery': 'bg-orange-500', 'Delivered': 'bg-green-500'
@@ -138,7 +141,10 @@ export default function AdminStaff() {
   }
 
   const activeCount = staff.filter(w => w.is_active).length;
-  const totalScans = staff.reduce((sum, w) => sum + w.total_scans, 0);
+  // Scans hutoka kwa Mpakiaji pekee.
+  const totalScans = staff
+    .filter(w => w.department === SCANNER_DEPT)
+    .reduce((sum, w) => sum + w.total_scans, 0);
 
   return (
     <DashboardLayout title="Wafanyakazi">
@@ -180,7 +186,7 @@ export default function AdminStaff() {
               { label: 'Wafanyakazi Wote', value: total, color: 'from-blue-400 to-blue-600', icon: <Users className="w-5 h-5" /> },
               { label: 'Wanaofanya Kazi', value: activeCount, color: 'from-emerald-400 to-green-600', icon: <CheckCircle className="w-5 h-5" /> },
               { label: 'Vitengo', value: DEPARTMENTS.length, color: 'from-violet-400 to-purple-600', icon: <Building2 className="w-5 h-5" /> },
-              { label: 'Jumla ya Scans', value: totalScans, color: 'from-amber-400 to-orange-600', icon: <Scan className="w-5 h-5" /> },
+              { label: 'Scans za Mpakiaji', value: totalScans, color: 'from-amber-400 to-orange-600', icon: <Scan className="w-5 h-5" /> },
             ].map(c => (
               <div key={c.label} className="relative bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 hover:bg-white/[0.14] hover:-translate-y-0.5 transition-all overflow-hidden">
                 <div className="flex items-center gap-3">
@@ -255,7 +261,14 @@ export default function AdminStaff() {
                       </td>
                       <td className="px-4 py-3.5">
                         <div>
-                          <p className="font-medium text-gray-800 text-xs">{w.department}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-gray-800 text-xs">{w.department}</p>
+                            {w.department === SCANNER_DEPT && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5" title="Anaruhusiwa kufanya scan">
+                                <Scan className="w-2.5 h-2.5" /> Scanner
+                              </span>
+                            )}
+                          </div>
                           <span className={`inline-block mt-0.5 text-xs text-white px-2 py-0.5 rounded-full ${STATUS_COLOR[DEPT_STATUS[w.department]] || 'bg-gray-400'}`}>
                             {DEPT_STATUS[w.department]}
                           </span>
@@ -264,8 +277,14 @@ export default function AdminStaff() {
                       <td className="px-4 py-3.5 text-gray-600 text-xs">{w.station || '—'}</td>
                       <td className="px-4 py-3.5 font-mono text-xs text-brand-blue font-semibold">{w.employee_id}</td>
                       <td className="px-4 py-3.5">
-                        <p className="font-bold text-gray-900">{w.total_scans}</p>
-                        <p className="text-[10px] text-gray-400">{timeAgo(w.last_scan)}</p>
+                        {w.department === SCANNER_DEPT ? (
+                          <>
+                            <p className="font-bold text-gray-900">{w.total_scans}</p>
+                            <p className="text-[10px] text-gray-400">{timeAgo(w.last_scan)}</p>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-300" title="Mpakiaji pekee ndiye hufanya scan">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${w.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
