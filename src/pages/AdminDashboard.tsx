@@ -1,18 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, RefreshCw, Loader2, Package, Truck,
-  CheckCircle, Clock, X, Trash2, Filter,
-  MapPin, FileText, StickyNote, Printer, TrendingUp,
+  CheckCircle, Clock, X, Trash2, Filter, ChevronDown,
+  MapPin, FileText, StickyNote, Printer,
   CreditCard, Copy, Check, XCircle, Phone, User, Wallet,
+  Send, Building2, PackageOpen,
 } from 'lucide-react';
-import { getAllShipments, createShipment, updateShipmentStatus, deleteShipment, confirmPayment, rejectPayment, getPaymentStats, type PaymentStats } from '../api/shipments';
+import {
+  getAllShipments, createShipment, updateShipmentStatus, deleteShipment,
+  confirmPayment, rejectPayment, getPaymentStats, getAllVehicles, getAllBranches,
+  type PaymentStats, type Branch,
+} from '../api/shipments';
 import StatusBadge from '../components/StatusBadge';
 import SearchableSelect from '../components/SearchableSelect';
 import CustomerSearchInput from '../components/CustomerSearchInput';
 import Calendar from '../components/Calendar';
 import DashboardLayout from '../components/DashboardLayout';
-import type { Shipment, ShipmentStatus, CreateShipmentForm } from '../types';
+import type { Shipment, ShipmentStatus, CreateShipmentForm, Vehicle } from '../types';
 import { STATUSES } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -105,7 +110,11 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
   }, [isAdmin, auth.isAuthenticated, navigate]);
 
   const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [allDates, setAllDates] = useState<string[]>([]);
+  const [allShipments, setAllShipments] = useState<Shipment[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showFilters, setShowFilters] = useState(false);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
@@ -150,18 +159,18 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
     return () => clearTimeout(timer);
   }, [fetchShipments]);
 
-  // All shipment dates for the calendar — independent of filter/search
-  const fetchAllDates = useCallback(async () => {
+  // All shipments for the calendar + per-day list — independent of filter/search
+  const fetchAllShipments = useCallback(async () => {
     try {
       const data = await getAllShipments();
-      setAllDates(data.shipments.map(s => s.createdAt));
+      setAllShipments(data.shipments);
       setPendingCount(data.shipments.filter(s => s.paymentStatus === 'pending').length);
     } catch {
       // handled silently
     }
   }, []);
 
-  useEffect(() => { fetchAllDates(); }, [fetchAllDates]);
+  useEffect(() => { fetchAllShipments(); }, [fetchAllShipments]);
 
   const fetchPaymentStats = useCallback(async () => {
     try {
@@ -174,6 +183,37 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
   }, []);
 
   useEffect(() => { fetchPaymentStats(); }, [fetchPaymentStats]);
+
+  // Fleet + branches for the dashboard sidebar widgets
+  const fetchSidebarData = useCallback(async () => {
+    try {
+      const [v, b] = await Promise.all([getAllVehicles(), getAllBranches()]);
+      setVehicles(v.vehicles);
+      setBranches(b.branches);
+    } catch {
+      // handled silently
+    }
+  }, []);
+
+  useEffect(() => { fetchSidebarData(); }, [fetchSidebarData]);
+
+  // Shipments registered on the day picked in the calendar
+  const selectedDayShipments = useMemo(() => {
+    return allShipments.filter(s => {
+      const d = new Date(s.createdAt);
+      return d.getFullYear() === selectedDate.getFullYear()
+        && d.getMonth() === selectedDate.getMonth()
+        && d.getDate() === selectedDate.getDate();
+    });
+  }, [allShipments, selectedDate]);
+
+  const fleet = useMemo(() => ({
+    total: vehicles.length,
+    departed: vehicles.filter(v => v.status === 'in_transit').length,
+    loading: vehicles.filter(v => v.status === 'loading').length,
+    arrived: vehicles.filter(v => v.status === 'arrived').length,
+    available: vehicles.filter(v => v.status === 'available').length,
+  }), [vehicles]);
 
   function addCargoItem(typeId: string) {
     setOrder(p => {
@@ -305,7 +345,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
       const newShipment = await createShipment(payload);
       setShipments(prev => [newShipment, ...prev]);
-      setAllDates(prev => [newShipment.createdAt, ...prev]);
+      setAllShipments(prev => [newShipment, ...prev]);
       setTotal(prev => prev + 1);
       setShowAddModal(false);
       setOrder(INITIAL_ORDER);
@@ -336,7 +376,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
       setShipments(prev => prev.filter(s => s._id !== id));
       setTotal(prev => prev - 1);
       setDeleteConfirm(null);
-      fetchAllDates();
+      fetchAllShipments();
     } catch {
       alert('Failed to delete shipment.');
     }
@@ -365,7 +405,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
         ? prev.filter(s => s._id !== updated._id)
         : prev.map(s => (s._id === updated._id ? updated : s))
     );
-    fetchAllDates();
+    fetchAllShipments();
     fetchPaymentStats();
   }
 
@@ -427,62 +467,32 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
       title="Dashboard"
       onNewShipment={isAdmin ? undefined : () => setShowAddModal(true)}
     >
-        {/* Stat cards section */}
-        <div className="relative bg-gradient-to-br from-[#0a1747] via-brand-blue to-[#1a2d7a] text-white overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
-            style={{
-              backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-              backgroundSize: '50px 50px'
-            }}
-          />
-          <div className="absolute -top-20 right-0 w-72 h-72 bg-brand-green/15 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative px-4 sm:px-6 lg:px-10 py-8">
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {statCards.map(card => {
-                const Icon = card.icon;
-                return (
-                  <div
-                    key={card.label}
-                    className={`group relative bg-white p-5 shadow-xl ${card.glow} hover:-translate-y-1 transition-all duration-300 overflow-hidden`}
-                  >
-                    <div className={`absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br ${card.gradient} opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition-opacity`} />
-
-                    <div className="relative flex items-start justify-between mb-3">
-                      <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-md`}>
-                        <Icon className="w-5 h-5 text-white" strokeWidth={2.25} />
-                      </div>
-                      <span className={`inline-flex items-center gap-1 ${card.bg} ${card.accent} text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full`}>
-                        <TrendingUp className="w-3 h-3" /> Live
-                      </span>
-                    </div>
-
-                    <p className="text-3xl font-bold text-gray-900 leading-none mb-1.5">{card.value}</p>
-                    <p className="text-gray-500 text-xs font-medium">{card.label}</p>
+        {/* ═══ STATS — shipments + payments in one clean section ═══ */}
+        <div className="bg-gray-50 px-4 sm:px-6 lg:px-10 pt-6 pb-1 space-y-3 sm:space-y-4">
+          {/* Shipments */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {statCards.map(card => {
+              const Icon = card.icon;
+              return (
+                <div key={card.label} className="bg-white border border-gray-200 rounded-xl p-4">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${card.bg} ${card.accent}`}>
+                    <Icon className="w-5 h-5" strokeWidth={2.25} />
                   </div>
-                );
-              })}
-            </div>
+                  <p className="text-2xl font-bold text-gray-900 leading-none">{card.value}</p>
+                  <p className="text-gray-500 text-xs font-medium mt-1">{card.label}</p>
+                </div>
+              );
+            })}
           </div>
-        </div>
 
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-10 py-8">
-
-        {/* ═══ PAYMENT STATS ═══ */}
-        {paymentStats && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <Wallet className="w-4 h-4 text-brand-blue" />
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Takwimu za Malipo</h2>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Payments */}
+          {paymentStats && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {([
-                { key: 'pending', label: 'Yanasubiri Kuhakikiwa', bucket: paymentStats.pending, icon: Clock, iconBg: 'bg-orange-100 text-orange-600', clickable: true },
-                { key: 'today',   label: 'Yamethibitishwa Leo',   bucket: paymentStats.today,   icon: CheckCircle, iconBg: 'bg-green-100 text-green-600', clickable: false },
-                { key: 'month',   label: 'Mwezi Huu',             bucket: paymentStats.month,   icon: CreditCard, iconBg: 'bg-blue-100 text-brand-blue', clickable: false },
-                { key: 'total',   label: 'Jumla Yote',            bucket: paymentStats.total,   icon: TrendingUp, iconBg: 'bg-gray-100 text-gray-700', clickable: false },
+                { key: 'pending', label: 'Malipo Yanasubiri',   bucket: paymentStats.pending, icon: Clock,       cls: 'bg-orange-50 text-orange-600', clickable: true },
+                { key: 'today',   label: 'Yamethibitishwa Leo', bucket: paymentStats.today,   icon: CheckCircle, cls: 'bg-green-50 text-green-600',   clickable: false },
+                { key: 'month',   label: 'Malipo Mwezi Huu',    bucket: paymentStats.month,   icon: CreditCard,  cls: 'bg-blue-50 text-brand-blue',   clickable: false },
+                { key: 'total',   label: 'Jumla ya Malipo',     bucket: paymentStats.total,   icon: Wallet,      cls: 'bg-gray-100 text-gray-700',    clickable: false },
               ] as const).map(card => {
                 const Icon = card.icon;
                 return (
@@ -490,102 +500,110 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     key={card.key}
                     type="button"
                     onClick={() => card.clickable && setFilter(PENDING_PAYMENTS)}
-                    className={`text-left bg-white border border-gray-100 shadow-sm rounded-xl p-4 transition-all ${
-                      card.clickable ? 'hover:shadow-md hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'
+                    className={`text-left bg-white border border-gray-200 rounded-xl p-4 transition-colors ${
+                      card.clickable ? 'hover:border-orange-300 cursor-pointer' : 'cursor-default'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.iconBg}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${card.cls}`}>
                         <Icon className="w-5 h-5" strokeWidth={2.25} />
                       </div>
-                      <span className="text-xs font-medium text-gray-400">{card.bucket.count} malipo</span>
+                      <span className="text-xs font-medium text-gray-400">{card.bucket.count}</span>
                     </div>
                     <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">{formatMoney(card.bucket.amount)}</p>
-                    <p className="text-xs text-gray-500 mt-1">{card.label}</p>
+                    <p className="text-gray-500 text-xs font-medium mt-1">{card.label}</p>
                   </button>
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-10 py-6">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
 
         {/* ═══ LEFT: SHIPMENTS ═══ */}
         <div className="min-w-0 order-2 xl:order-1">
-        {/* Section title */}
-        <div className="flex items-end justify-between mb-5">
+        {/* Section title + toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Shipments</h2>
             <p className="text-xs text-gray-500 mt-0.5">Manage and track all cargo shipments</p>
           </div>
-        </div>
-
-        {/* Filters & Search */}
-        <div className="bg-white shadow-sm border border-gray-100 p-4 mb-5">
-          <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 text-gray-400 pr-2 border-r border-gray-200">
-                <Filter className="w-4 h-4" />
-                <span className="text-xs font-semibold uppercase tracking-wider">Filter</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {FILTER_TABS.map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setFilter(tab)}
-                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                      filter === tab
-                        ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/25'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setFilter(PENDING_PAYMENTS)}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                    filter === PENDING_PAYMENTS
-                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
-                      : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
-                  }`}
-                >
-                  <Wallet className="w-3.5 h-3.5" /> Pending Payments
-                  {pendingCount > 0 && (
-                    <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold inline-flex items-center justify-center ${
-                      filter === PENDING_PAYMENTS ? 'bg-white/25 text-white' : 'bg-orange-500 text-white'
-                    }`}>
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex-1 sm:w-60 flex items-center gap-2 border border-gray-200 bg-white rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-brand-blue focus-within:border-brand-blue transition-all">
+              <Search className="w-4 h-4 text-gray-400" />
+              <input
+                placeholder="Tafuta jina, ID, simu..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400 min-w-0"
+              />
             </div>
-
-            <div className="flex gap-2 w-full lg:w-auto">
-              <div className="flex-1 lg:w-72 flex items-center gap-2 border border-gray-200 bg-gray-50 rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-brand-blue focus-within:border-brand-blue focus-within:bg-white transition-all">
-                <Search className="w-4 h-4 text-gray-400" />
-                <input
-                  placeholder="Search by name, ID, phone..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
-                />
-              </div>
-              <button
-                onClick={fetchShipments}
-                className="border border-gray-200 bg-gray-50 hover:bg-white hover:border-brand-blue hover:text-brand-blue p-2.5 rounded-xl transition-all"
-                title="Refresh"
-              >
-                <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                showFilters || filter !== 'All'
+                  ? 'bg-brand-blue text-white border-brand-blue'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Filter</span>
+              {filter !== 'All' && <span className="w-1.5 h-1.5 rounded-full bg-brand-green" />}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+            <button
+              onClick={fetchShipments}
+              className="border border-gray-200 bg-white hover:border-brand-blue hover:text-brand-blue p-2.5 rounded-xl transition-all"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
 
+        {/* Filters (collapsible) */}
+        {showFilters && (
+          <div className="bg-white border border-gray-200 rounded-xl p-3 mb-4">
+            <div className="flex flex-wrap gap-1.5">
+              {FILTER_TABS.map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setFilter(tab)}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    filter === tab
+                      ? 'bg-brand-blue text-white shadow-sm'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+              <button
+                onClick={() => setFilter(PENDING_PAYMENTS)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  filter === PENDING_PAYMENTS
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+                }`}
+              >
+                <Wallet className="w-3.5 h-3.5" /> Pending Payments
+                {pendingCount > 0 && (
+                  <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold inline-flex items-center justify-center ${
+                    filter === PENDING_PAYMENTS ? 'bg-white/25 text-white' : 'bg-orange-500 text-white'
+                  }`}>
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
-        <div className="bg-white shadow-md border border-gray-100 overflow-hidden p-0">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden p-0">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
@@ -690,9 +708,93 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
         </div>
         {/* ═══ END LEFT ═══ */}
 
-        {/* ═══ RIGHT: CALENDAR SIDEBAR ═══ */}
-        <div className="order-1 xl:order-2 xl:sticky xl:top-6">
-          <Calendar events={allDates} />
+        {/* ═══ RIGHT: SIDEBAR ═══ */}
+        <div className="order-1 xl:order-2 space-y-5">
+          {/* Calendar */}
+          <Calendar events={allShipments.map(s => s.createdAt)} onSelectDate={setSelectedDate} />
+
+          {/* Selected day's shipments */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900">Matukio ya Siku</h3>
+              <span className="text-xs text-gray-400">
+                {selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              </span>
+            </div>
+            {selectedDayShipments.length === 0 ? (
+              <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna mzigo siku hii.</p>
+            ) : (
+              <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                {selectedDayShipments.map(s => (
+                  <a key={s._id} href={`/track?id=${s.trackingId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center shrink-0">
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-xs font-semibold text-brand-blue truncate">{s.trackingId}</p>
+                      <p className="text-xs text-gray-500 truncate">{s.customerName} · {s.from} → {s.to}</p>
+                    </div>
+                    <StatusBadge status={s.status} />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fleet summary */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-brand-blue" /> Magali
+              </h3>
+              <span className="text-xs text-gray-400">Jumla {fleet.total}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-px bg-gray-100">
+              {[
+                { label: 'Yameondoka', value: fleet.departed, icon: Send, cls: 'text-amber-600' },
+                { label: 'Yanapakiwa', value: fleet.loading, icon: PackageOpen, cls: 'text-purple-600' },
+                { label: 'Yamefika', value: fleet.arrived, icon: CheckCircle, cls: 'text-emerald-600' },
+                { label: 'Yapo Tayari', value: fleet.available, icon: Truck, cls: 'text-gray-600' },
+              ].map(f => {
+                const Icon = f.icon;
+                return (
+                  <div key={f.label} className="bg-white p-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`w-4 h-4 ${f.cls}`} />
+                      <span className="text-lg font-bold text-gray-900">{f.value}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{f.label}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Branches */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-brand-blue" /> Matawi
+              </h3>
+              <span className="text-xs text-gray-400">{branches.length}</span>
+            </div>
+            {branches.length === 0 ? (
+              <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna matawi.</p>
+            ) : (
+              <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+                {branches.map(b => (
+                  <div key={b.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${b.is_active ? 'bg-brand-green' : 'bg-gray-300'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 truncate">{b.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{b.location || b.region || '—'}</p>
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{b.staff_total} staff</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         </div>

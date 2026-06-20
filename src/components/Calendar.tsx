@@ -20,12 +20,19 @@ function dayKey(d: Date) {
 interface CalendarProps {
   /** Dates that have shipments — used to mark days. */
   events?: (string | Date)[];
+  /** Called when the user picks a day. */
+  onSelectDate?: (date: Date) => void;
 }
 
-export default function Calendar({ events = [] }: CalendarProps) {
+export default function Calendar({ events = [], onSelectDate }: CalendarProps) {
   const today = new Date();
   const [view, setView] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selected, setSelected] = useState<Date>(today);
+
+  function pick(date: Date) {
+    setSelected(date);
+    onSelectDate?.(date);
+  }
 
   // Count of shipments per day, keyed by Y-M-D
   const counts = useMemo(() => {
@@ -103,7 +110,7 @@ export default function Calendar({ events = [] }: CalendarProps) {
             return (
               <button
                 key={day}
-                onClick={() => setSelected(date)}
+                onClick={() => pick(date)}
                 title={count > 0 ? `${count} shipment${count > 1 ? 's' : ''}` : undefined}
                 className={`relative aspect-square flex items-center justify-center text-sm rounded-lg transition-all ${
                   isSelected
@@ -139,7 +146,7 @@ export default function Calendar({ events = [] }: CalendarProps) {
             </span>
           )}
           <button
-            onClick={() => { setView(new Date(today.getFullYear(), today.getMonth(), 1)); setSelected(today); }}
+            onClick={() => { setView(new Date(today.getFullYear(), today.getMonth(), 1)); pick(today); }}
             className="text-[11px] font-semibold text-brand-blue hover:text-brand-blue-dark uppercase tracking-wider"
           >
             Leo

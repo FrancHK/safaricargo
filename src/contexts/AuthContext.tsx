@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import type { AdminUser } from '../types';
 
 interface AuthContextType {
@@ -11,23 +11,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
+// Read the persisted session synchronously so the very first render already
+// knows whether the user is authenticated — otherwise a refresh briefly sees
+// "logged out", bounces to /admin/login, and flashes a blank screen.
+function readSavedSession(): { token: string | null; admin: AdminUser | null } {
+  try {
     const savedToken = localStorage.getItem('sc_token');
     const savedAdmin = localStorage.getItem('sc_admin');
     if (savedToken && savedAdmin && savedAdmin !== 'undefined' && savedAdmin !== 'null') {
-      try {
-        setToken(savedToken);
-        setAdmin(JSON.parse(savedAdmin));
-      } catch {
-        localStorage.removeItem('sc_token');
-        localStorage.removeItem('sc_admin');
-      }
+      return { token: savedToken, admin: JSON.parse(savedAdmin) as AdminUser };
     }
-  }, []);
+  } catch {
+    localStorage.removeItem('sc_token');
+    localStorage.removeItem('sc_admin');
+  }
+  return { token: null, admin: null };
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [{ admin, token }, setSession] = useState(readSavedSession);
+  const setAdmin = (a: AdminUser | null) => setSession(prev => ({ ...prev, admin: a }));
+  const setToken = (t: string | null) => setSession(prev => ({ ...prev, token: t }));
 
   function login(newToken: string, newAdmin: AdminUser) {
     setToken(newToken);

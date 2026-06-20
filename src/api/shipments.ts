@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Shipment, CreateShipmentForm, ShipmentStatus, Staff, StaffUser, ScanResult, Customer } from '../types';
+import type { Shipment, CreateShipmentForm, ShipmentStatus, Staff, StaffUser, ScanResult, Customer, Vehicle } from '../types';
 
 const api = axios.create({ baseURL: '/api' });
 
@@ -56,6 +56,11 @@ export interface PaymentStats {
 export async function getPaymentStats() {
   const { data } = await api.get('/shipments/payment-stats');
   return data as PaymentStats;
+}
+
+export async function getAllVehicles() {
+  const { data } = await api.get('/vehicles');
+  return data as { vehicles: Vehicle[]; total: number };
 }
 
 export async function createShipment(form: CreateShipmentForm) {
