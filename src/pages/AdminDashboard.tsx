@@ -468,19 +468,19 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
       onNewShipment={isAdmin ? undefined : () => setShowAddModal(true)}
     >
         {/* ═══ STATS — shipments + payments in one clean section ═══ */}
-        <div className="bg-gray-50 px-4 sm:px-6 lg:px-10 pt-6 pb-1 space-y-3 sm:space-y-4">
+        <div className="bg-gray-50 px-4 sm:px-6 lg:px-10 pt-4 pb-1 space-y-2.5 sm:space-y-3">
           {/* Shipments */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {statCards.map(card => {
               const Icon = card.icon;
               return (
-                <div key={card.label} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${card.bg} ${card.accent}`}>
-                    <Icon className="w-5 h-5" strokeWidth={2.25} />
+                <div key={card.label} className="bg-white border border-gray-200 rounded-xl px-3.5 py-2 flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${card.bg} ${card.accent}`}>
+                    <Icon className="w-[18px] h-[18px]" strokeWidth={2.25} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xl font-bold text-gray-900 leading-none">{card.value}</p>
-                    <p className="text-gray-500 text-xs font-medium mt-1 truncate">{card.label}</p>
+                    <p className="text-lg font-bold text-gray-900 leading-none">{card.value}</p>
+                    <p className="text-gray-500 text-[11px] font-medium mt-0.5 truncate">{card.label}</p>
                   </div>
                 </div>
               );
@@ -489,7 +489,7 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
           {/* Payments */}
           {paymentStats && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               {([
                 { key: 'pending', label: 'Malipo Yanasubiri',   bucket: paymentStats.pending, icon: Clock,       cls: 'bg-orange-50 text-orange-600', clickable: true },
                 { key: 'today',   label: 'Yamethibitishwa Leo', bucket: paymentStats.today,   icon: CheckCircle, cls: 'bg-green-50 text-green-600',   clickable: false },
@@ -502,16 +502,16 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     key={card.key}
                     type="button"
                     onClick={() => card.clickable && setFilter(PENDING_PAYMENTS)}
-                    className={`text-left bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3 transition-colors ${
+                    className={`text-left bg-white border border-gray-200 rounded-xl px-3.5 py-2 flex items-center gap-2.5 transition-colors ${
                       card.clickable ? 'hover:border-orange-300 cursor-pointer' : 'cursor-default'
                     }`}
                   >
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${card.cls}`}>
-                      <Icon className="w-5 h-5" strokeWidth={2.25} />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${card.cls}`}>
+                      <Icon className="w-[18px] h-[18px]" strokeWidth={2.25} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-base sm:text-lg font-bold text-gray-900 leading-none truncate">{formatMoney(card.bucket.amount)}</p>
-                      <p className="text-gray-500 text-xs font-medium mt-1 truncate">{card.label} · {card.bucket.count}</p>
+                      <p className="text-gray-500 text-[11px] font-medium mt-0.5 truncate">{card.label} · {card.bucket.count}</p>
                     </div>
                   </button>
                 );
@@ -711,37 +711,6 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
 
         {/* ═══ RIGHT: SIDEBAR ═══ */}
         <div className="order-1 lg:order-2 lg:sticky lg:top-4 space-y-4">
-          {/* Calendar */}
-          <Calendar events={allShipments.map(s => s.createdAt)} onSelectDate={setSelectedDate} />
-
-          {/* Selected day's shipments */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-900">Matukio ya Siku</h3>
-              <span className="text-xs text-gray-400">
-                {selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-              </span>
-            </div>
-            {selectedDayShipments.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna mzigo siku hii.</p>
-            ) : (
-              <div className="divide-y divide-gray-50 max-h-40 overflow-y-auto">
-                {selectedDayShipments.map(s => (
-                  <a key={s._id} href={`/track?id=${s.trackingId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center shrink-0">
-                      <Package className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-mono text-xs font-semibold text-brand-blue truncate">{s.trackingId}</p>
-                      <p className="text-xs text-gray-500 truncate">{s.customerName} · {s.from} → {s.to}</p>
-                    </div>
-                    <StatusBadge status={s.status} />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Fleet summary */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -792,6 +761,37 @@ export default function AdminDashboard({ role = 'admin' }: DashboardProps) {
                     </div>
                     <span className="text-xs text-gray-400 shrink-0">{b.staff_total} staff</span>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Calendar */}
+          <Calendar events={allShipments.map(s => s.createdAt)} onSelectDate={setSelectedDate} />
+
+          {/* Selected day's shipments */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900">Matukio ya Siku</h3>
+              <span className="text-xs text-gray-400">
+                {selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              </span>
+            </div>
+            {selectedDayShipments.length === 0 ? (
+              <p className="px-4 py-6 text-center text-xs text-gray-400">Hakuna mzigo siku hii.</p>
+            ) : (
+              <div className="divide-y divide-gray-50 max-h-40 overflow-y-auto">
+                {selectedDayShipments.map(s => (
+                  <a key={s._id} href={`/track?id=${s.trackingId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center shrink-0">
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-xs font-semibold text-brand-blue truncate">{s.trackingId}</p>
+                      <p className="text-xs text-gray-500 truncate">{s.customerName} · {s.from} → {s.to}</p>
+                    </div>
+                    <StatusBadge status={s.status} />
+                  </a>
                 ))}
               </div>
             )}
